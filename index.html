@@ -157,7 +157,14 @@
       white-space:nowrap;
     }
 
-</style>
+
+    /* --- Scroll lock (left game area) --- */
+    html,body{overflow:hidden; overscroll-behavior:none;}
+    .app{overflow:hidden;}
+    .game{overflow:hidden;}
+    .panel{overflow:auto; height:100%;}
+
+  </style>
   <!-- ✅ Single-file + file:// 실행을 위해 importmap 사용 -->
   <script type="importmap">
   {
