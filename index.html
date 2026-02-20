@@ -1,0 +1,2733 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>과제 테스트 · GLB 통합 버전 (Single File)</title>
+  <style>
+    html,body{margin:0;height:100%;background:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif;}
+    .app{height:100%;display:flex;background:#fff;}
+    .game{flex:1;min-width:0;position:relative;background:#fff;width:min(calc(100vh * 0.5625), calc(100% - 360px));max-width:calc(100% - 360px);}
+    canvas{width:100%;height:100%;display:block;touch-action:none;}
+    .panel{
+      width:360px;border-left:1px solid rgba(0,0,0,0.12);
+      padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;background:#fafafa;
+    }
+    .title{
+      font-weight:800;font-size:14px;padding:10px 12px;border:1px solid rgba(0,0,0,0.12);
+      border-radius:12px;background:#fff;
+    }
+    .row{display:flex;gap:10px;}
+    button{
+      flex:1;height:46px;border-radius:12px;border:1px solid rgba(0,0,0,0.16);
+      background:#fff;font-weight:800;font-size:16px;cursor:pointer;
+    }
+    button:disabled{opacity:.45;cursor:not-allowed;}
+    .status{
+      font-size:16px;line-height:1.4;padding:12px;border-radius:12px;border:1px solid rgba(0,0,0,0.12);
+      background:#fff;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+    }
+    .help{
+      font-size:14px;line-height:1.45;color:#222;padding:12px;border-radius:12px;
+      border:1px solid rgba(0,0,0,0.12);background:#fff;
+    }
+
+    .storage{
+      font-size:13px;line-height:1.45;color:#222;padding:12px;border-radius:12px;
+      border:1px solid rgba(0,0,0,0.12);background:#fff;display:flex;flex-direction:column;gap:10px;
+    }
+    .storage .row{display:flex;gap:10px;}
+    .storage button{
+      height:40px;font-size:14px;font-weight:800;border-radius:10px;
+    }
+    .storage .hint{font-size:12px;color:#666;}
+  
+    /* HUD overlay */
+    .hud{position:absolute;inset:0;pointer-events:none;}
+    .hud-bottom{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:12px;pointer-events:auto;}
+    .hudBtn{
+      height:88px;min-width:280px;padding:0 36px;border-radius:22px;border:1px solid rgba(0,0,0,.14);
+      font-size:28px;
+      background:#111;color:#fff;font-weight:800;letter-spacing:.2px;cursor:pointer;
+      box-shadow:0 6px 18px rgba(0,0,0,.12);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;white-space:normal;line-height:1.05;
+    }
+    .hudBtn:active{transform:translateY(1px);}
+    .hudBtn[disabled]{opacity:.5;cursor:not-allowed;}
+    #lockBtn{display:none;}
+    .hud-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+    .clearText{
+      font-size:56px;font-weight:900;letter-spacing:2px;
+      padding:14px 22px;border-radius:18px;
+      background:rgba(255,255,255,.78);border:1px solid rgba(0,0,0,.12);
+      box-shadow:0 10px 30px rgba(0,0,0,.10);
+      user-select:none;
+    }
+
+  
+    .stageLabel{
+      position:absolute;top:14px;left:50%;transform:translateX(-50%);
+      padding:8px 14px;border-radius:14px;
+      background:rgba(255,255,255,.82);border:1px solid rgba(0,0,0,.12);
+      font-weight:900;font-size:18px;letter-spacing:.5px;
+      pointer-events:none;user-select:none;
+      box-shadow:0 8px 24px rgba(0,0,0,.10);
+    }
+    .stageBox{
+      padding:12px;border-radius:12px;border:1px solid rgba(0,0,0,0.12);background:#fff;
+      display:flex;flex-direction:column;gap:10px;
+    }
+    .stageGrid{display:grid;grid-template-columns:repeat(2, 1fr);gap:8px;}
+    .stageBtn{
+      height:42px;border-radius:12px;border:1px solid rgba(0,0,0,.16);
+      background:#fff;font-weight:900;font-size:14px;cursor:pointer;
+      display:flex;align-items:center;justify-content:space-between;padding:0 12px;
+    }
+    .stageBtn.locked{opacity:.45;cursor:not-allowed;background:#f1f1f1;}
+    .stageBtn .stars{font-size:14px;letter-spacing:1px;}
+    .adminWarn{font-size:12px;color:#b42318;line-height:1.35;}
+
+  
+    .hudBtn .sub{font-size:0.70em;font-weight:800;opacity:.9;}
+    .statusTitle{font-weight:900;margin-bottom:8px;}
+    .matchGrid{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;row-gap:4px;font-size:12px;line-height:1.2;}
+    .matchItem{display:flex;justify-content:space-between;gap:10px;}
+    .matchItem .k{min-width:28px;font-weight:900;}
+    .matchItem .v{white-space:nowrap;}
+
+
+    /* Controls overlay (top-left, transparent) */
+    .controlsOverlay{
+      position:absolute; top:14px; left:14px;
+      pointer-events:auto;
+      /* 30~50% smaller than previous (14px -> 10px) */
+      font-size:10px; line-height:1.45; color:#111;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.65);
+      user-select:none;
+    }
+    .controlsOverlay .toggle{
+      cursor:pointer;
+      font-weight:900;
+      margin-bottom:6px;
+    }
+    .controlsOverlay .content{ display:block; }
+
+
+    /* Stage 1 tutorial overlay */
+    .tutorialArrow{
+      position:absolute;
+      width:92px;
+      height:122px;
+      pointer-events:none;
+      opacity:0.35;
+      transform: translate(-50%, -100%);
+      animation: tutBounce 1.05s ease-in-out infinite;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.10));
+    }
+    @keyframes tutBounce{
+      0%,100%{ transform: translate(-50%, -100%) translateY(10px); }
+      50%     { transform: translate(-50%, -100%) translateY(-10px); }
+    }
+    .tutorialArrow svg{ width:100%; height:100%; display:block; }
+
+    .tutorialText{
+      position:absolute;
+      left:50%;
+      bottom:86px;
+      transform: translateX(-50%);
+      font-size:22px;
+      font-weight:900;
+      color:#111;
+      pointer-events:none;
+      user-select:none;
+      text-shadow: 0 2px 0 rgba(255,255,255,0.75);
+      white-space:nowrap;
+    }
+
+</style>
+  <!-- ✅ Single-file + file:// 실행을 위해 importmap 사용 -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+
+<body>
+  <div class="app">
+    <div class="game">
+      <canvas id="c"></canvas>
+      <div class="hud" aria-label="game hud">
+        <div id="stageLabel" class="stageLabel">스테이지 10</div>
+        <div id="controlsOverlay" class="controlsOverlay" aria-label="controls overlay">
+          <div id="controlsToggle" class="toggle">조작 ▲</div>
+          <div id="controlsContent" class="content">
+            - 스타트 : 버튼 클릭 / 스페이스바<br>
+            - 결정 : 버튼 클릭 / 스페이스바<br>
+            - → : → 슬라이드 / D / 숫자패드 6<br>
+            - ← : ← 슬라이드 / A / 숫자패드 4<br>
+            - ↑ : ↑ 슬라이드 / W / 숫자패드 8<br>
+            - ↓ : ↓ 슬라이드 / S / 숫자패드 5
+          </div>
+        </div>
+
+
+        <!-- Stage 1 tutorial overlay -->
+        <div id="tutorialArrow" class="tutorialArrow" style="display:none;"></div>
+        <div id="tutorialText" class="tutorialText" style="display:none;">블록을 굴려서 목적지로 옮겨 보세요.</div>
+
+        <div class="hud-center">
+          <div id="clearText" class="clearText" style="display:none">CLEAR</div>
+        </div>
+        <div class="hud-bottom">
+          <button id="startBtn" class="hudBtn">스타트<br><span class="sub">(Space Bar)</span></button>
+          <button id="confirmBtn" class="hudBtn" style="display:none">결정<br><span class="sub">(Space Bar)</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="status" id="status">로딩중...</div>
+
+
+      <div class="stageBox" id="stageBox">
+        <b>스테이지</b>
+        <div class="stageGrid" id="stageGrid"></div>
+        <button id="adminModeBtn" type="button" style="height:40px;font-size:14px;font-weight:900;border-radius:10px;border:1px solid rgba(0,0,0,.16);background:#fff;cursor:pointer;">관리자 모드로 전환</button>
+        <div class="adminWarn">※ 관리자 모드에서는 모든 스테이지에 제한 없이 입장할 수 있습니다. (테스트용)</div>
+      </div>
+
+
+      <div class="storage">
+        <b>로컬 데이터</b>
+<div class="row">
+          <button id="resetAllBtn" type="button">전체 기록 삭제</button>
+        </div>
+        <div class="hint" id="storageHint">stageKeyOf(CURRENT_STAGE_ID): -</div>
+      </div>
+
+
+
+      <div class="storage" id="solverBox">
+        <b>최소 굴림수</b>
+        <div class="row">
+          <button id="solveStageBtn" type="button">현재 스테이지 계산</button>
+          <button id="refineBtn" type="button" disabled style="margin-top:8px;">2단계 재탐색</button>
+</div>
+        <div class="solverControls" style="margin-top:10px;">
+          <div style="font-size:12px; color:#666; margin-bottom:6px;">튜닝 (근사치/완성 우선)</div>
+
+          <div class="row" style="gap:8px; align-items:center;">
+            <label style="flex:1; font-size:12px;">WEIGHT <span id="wAStarVal">1.6</span></label>
+            <input id="wAStar" type="range" min="1.0" max="4.0" step="0.1" value="1.6" style="flex:2;">
+          </div>
+
+          <div class="row" style="gap:8px; align-items:center;">
+            <label style="flex:1; font-size:12px;">남은목표 가중 <span id="wRemVal">12</span></label>
+            <input id="wRem" type="range" min="0" max="30" step="1" value="12" style="flex:2;">
+          </div>
+
+          <div class="row" style="gap:8px; align-items:center;">
+            <label style="flex:1; font-size:12px;">거리 가중 <span id="wDistVal">2.0</span></label>
+            <input id="wDist" type="range" min="0" max="5" step="0.1" value="2.0" style="flex:2;">
+          </div>
+
+          <div class="row" style="gap:8px; align-items:center;">
+            <label style="flex:1; font-size:12px;">회전 가중 <span id="wRotVal">1.0</span></label>
+            <input id="wRot" type="range" min="0" max="5" step="0.1" value="1.0" style="flex:2;">
+          </div>
+
+          <div class="row" style="gap:8px; align-items:center;">
+            <label style="flex:1; font-size:12px;">K(근접목표) <span id="kVal">3</span></label>
+            <input id="kNear" type="range" min="1" max="5" step="1" value="3" style="flex:2;">
+          </div>
+
+          <div class="row" style="gap:8px; align-items:center;">
+            <label style="flex:1; font-size:12px;">K합 가중 <span id="wKVal">0.7</span></label>
+            <input id="wK" type="range" min="0" max="2" step="0.1" value="0.7" style="flex:2;">
+          </div>
+
+          <div class="row" style="gap:8px; align-items:center;">
+            <label style="flex:1; font-size:12px;">완성 우선 <span id="doneBonusVal">0.05</span></label>
+            <input id="doneBonus" type="range" min="0" max="0.3" step="0.01" value="0.05" style="flex:2;">
+          </div>
+
+          <div class="row" style="gap:8px; align-items:center;">
+            <label style="flex:1; font-size:12px;">확장 한도 <span id="maxExpVal">180000</span></label>
+            <input id="maxExp" type="range" min="50000" max="1200000" step="20000" value="180000" style="flex:2;">
+          </div>
+
+          <div class="row" style="gap:8px; align-items:center;">
+            <label style="flex:1; font-size:12px;">OPEN 한도 <span id="maxOpenVal">60000</span></label>
+            <input id="maxOpen" type="range" min="10000" max="250000" step="10000" value="60000" style="flex:2;">
+          </div>
+
+          <div class="row" style="gap:8px; align-items:center; justify-content:space-between;">
+            <label style="font-size:12px;"><input id="pruneUnreachable" type="checkbox"> 도달불가 컷(느릴 수 있음)</label>
+          </div>
+        </div>
+
+        <div class="hint" id="solverHint">(버튼을 누르면 근사 최소 굴림수를 탐색합니다)</div>
+      </div>
+
+    </div>
+  </div>
+
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+
+/* =========================
+   STAGE SYSTEM (10 stages)
+   - Stage 1~9 : data from 05 file (Easy 5x4 target, Balanced cube 3 colors paired)
+   - Stage 10  : data from 09 file (Hard 8x11 target rows 2~7, Chaos fixed cube 6 colors)
+   - Unlock rule: stage 1 always unlocked, stage N unlocked if stage N-1 cleared, or adminMode enabled
+========================= */
+
+// Unified color table
+const HEX = {
+  R: 0xff3b3b,
+  O: 0xff8a2e,
+  Y: 0xffd22e,
+  G: 0x28c76f,
+  B: 0x2ea2ff,
+  P: 0xa855f7,
+  W: 0xffffff,
+  BEIGE: 0xf3f0e7,
+  GRID: 0x9aa1aa,
+};
+
+function mixWithWhite(hex, t=0.5){
+  const r = (hex>>16)&255, g=(hex>>8)&255, b=hex&255;
+  const nr = Math.round(r*(1-t) + 255*t);
+  const ng = Math.round(g*(1-t) + 255*t);
+  const nb = Math.round(b*(1-t) + 255*t);
+  return (nr<<16) | (ng<<8) | nb;
+}
+
+const HOVER_Y = 0.02;
+const CUBE_SIZE = 0.92;
+
+// --- Stage templates (05 / 09) ---
+// --- 10 stages config (full-board maps, fixed padding & start zone) ---
+// Legend in grids: W empty, R/O/Y/G/B/P targets. Start tiles are stored separately in startCells.
+const STAGES = [
+  {
+    id: 1, name: "스테이지 1",
+    boardW: 7, boardH: 10,
+    targetW: 7, targetH: 10, targetOX: 0, targetOY: 0,
+    dropY: 4.0,
+    startX: 3, startY: 9,
+    startCells: [[3,9]],
+    targetGrid: [
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","Y","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+    ],
+    blockType: "MONO_Y_1",
+  },
+  {
+    id: 2, name: "스테이지 2",
+    boardW: 7, boardH: 10,
+    targetW: 7, targetH: 10, targetOX: 0, targetOY: 0,
+    dropY: 4.0,
+    startX: 3, startY: 9,
+    startCells: [[3,9]],
+    targetGrid: [
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","Y","W","R","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+    ],
+    blockType: "ADJ_2_YR",
+  },
+  {
+    id: 3, name: "스테이지 3",
+    boardW: 7, boardH: 10,
+    targetW: 7, targetH: 10, targetOX: 0, targetOY: 0,
+    dropY: 4.0,
+    startX: 3, startY: 9,
+    startCells: [[3,9]],
+    targetGrid: [
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","Y","R","Y","W","W"],
+      ["W","W","R","Y","R","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W"],
+    ],
+    blockType: "ADJ_2_YR",
+  },
+  {
+    id: 4, name: "스테이지 4",
+    boardW: 8, boardH: 10,
+    targetW: 8, targetH: 10, targetOX: 0, targetOY: 0,
+    dropY: 4.0,
+    startX: 3, startY: 9,
+    startCells: [[2,9],[3,9],[4,9],[5,9]],
+    targetGrid: [
+      ["W","W","W","W","W","W","W","W"],
+      ["W","W","Y","W","W","Y","W","W"],
+      ["W","R","W","B","B","W","R","W"],
+      ["W","W","W","B","B","W","W","W"],
+      ["W","W","R","W","W","R","W","W"],
+      ["W","W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W","W"],
+    ],
+    blockType: "BALANCED_3_PAIRED",
+  },
+  {
+    id: 5, name: "스테이지 5",
+    boardW: 8, boardH: 10,
+    targetW: 8, targetH: 10, targetOX: 0, targetOY: 0,
+    dropY: 4.0,
+    startX: 3, startY: 9,
+    startCells: [[2,9],[3,9],[4,9],[5,9]],
+    targetGrid: [
+      ["W","W","W","W","W","W","W","W"],
+      ["W","W","Y","R","B","Y","W","W"],
+      ["W","Y","W","B","Y","W","Y","W"],
+      ["W","W","R","W","W","R","W","W"],
+      ["W","Y","W","B","Y","W","Y","W"],
+      ["W","W","Y","R","B","Y","W","W"],
+      ["W","W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W","W"],
+    ],
+    blockType: "BALANCED_3_PAIRED",
+  },
+  {
+    id: 6, name: "스테이지 6",
+    boardW: 8, boardH: 10,
+    targetW: 8, targetH: 10, targetOX: 0, targetOY: 0,
+    dropY: 4.0,
+    startX: 3, startY: 9,
+    startCells: [[2,9],[3,9],[4,9],[5,9]],
+    targetGrid: [
+      ["W","W","W","W","W","W","W","W"],
+      ["W","B","W","Y","Y","W","R","W"],
+      ["W","W","Y","R","B","Y","W","W"],
+      ["W","Y","R","B","R","B","Y","W"],
+      ["W","W","Y","R","B","Y","W","W"],
+      ["W","B","W","Y","Y","W","R","W"],
+      ["W","W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W","W"],
+      ["W","W","W","W","W","W","W","W"],
+    ],
+    blockType: "BALANCED_3_PAIRED",
+  },
+  {
+    id: 7, name: "스테이지 7",
+    boardW: 8, boardH: 11,
+    targetW: 8, targetH: 11, targetOX: 0, targetOY: 0,
+    dropY: 4.0,
+    startX: 3, startY: 10,
+    startCells: [[2,10],[3,10],[4,10],[5,10]],
+    targetGrid: [
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["R", "W", "O", "W", "G", "W", "P", "W"],
+      ["W", "P", "W", "Y", "W", "B", "W", "Y"],
+      ["Y", "W", "B", "W", "R", "W", "O", "W"],
+      ["W", "R", "W", "O", "W", "G", "W", "R"],
+      ["G", "W", "P", "W", "Y", "W", "B", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+    ],
+    blockType: "CHAOS_6_FIXED",
+  },
+  {
+    id: 8, name: "스테이지 8",
+    boardW: 8, boardH: 11,
+    targetW: 8, targetH: 11, targetOX: 0, targetOY: 0,
+    dropY: 4.0,
+    startX: 3, startY: 10,
+    startCells: [[2,10],[3,10],[4,10],[5,10]],
+    targetGrid: [
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["G", "W", "W", "R", "O", "W", "W", "B"],
+      ["W", "W", "Y", "R", "O", "G", "W", "W"],
+      ["W", "B", "Y", "W", "W", "G", "P", "W"],
+      ["W", "P", "B", "W", "W", "O", "B", "W"],
+      ["W", "W", "G", "P", "R", "Y", "W", "W"],
+      ["O", "W", "W", "B", "R", "W", "W", "P"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+    ],
+    blockType: "CHAOS_6_FIXED",
+  },
+  {
+    id: 9, name: "스테이지 9",
+    boardW: 8, boardH: 11,
+    targetW: 8, targetH: 11, targetOX: 0, targetOY: 0,
+    dropY: 4.0,
+    startX: 3, startY: 10,
+    startCells: [[2,10],[3,10],[4,10],[5,10]],
+    targetGrid: [
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "B", "B", "W", "W", "B", "B", "W"],
+      ["P", "G", "Y", "R", "R", "Y", "G", "P"],
+      ["P", "W", "W", "W", "W", "W", "W", "P"],
+      ["P", "G", "Y", "O", "O", "Y", "G", "P"],
+      ["W", "B", "W", "B", "B", "W", "B", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+    ],
+    blockType: "CHAOS_6_FIXED",
+  },
+  {
+    id: 10, name: "스테이지 10",
+    boardW: 8, boardH: 11,
+    targetW: 8, targetH: 11, targetOX: 0, targetOY: 0,
+    dropY: 4.0,
+    startX: 3, startY: 10,
+    startCells: [[2,10],[3,10],[4,10],[5,10]],
+    targetGrid: [
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "R", "Y", "O", "G", "W", "W"],
+      ["W", "R", "Y", "O", "G", "B", "P", "W"],
+      ["W", "Y", "O", "G", "B", "P", "R", "W"],
+      ["W", "O", "G", "B", "P", "R", "Y", "W"],
+      ["W", "W", "B", "P", "R", "Y", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+      ["W", "W", "W", "W", "W", "W", "W", "W"],
+    ],
+    blockType: "CHAOS_6_FIXED",
+  },
+];
+
+/* =========================
+   STAR RATING (CLEAR)
+   기준: 3성<=115%, 2성<=145%, 1성<=185% (stage 평균 기반, 내림)
+========================= */
+const STAR_CUTS = {
+  1:  { s3: 8,   s2: 10,  s1: 12 },
+  2:  { s3: 18,  s2: 23,  s1: 29 },
+  3:  { s3: 54,  s2: 68,  s1: 86 },
+  4:  { s3: 97,  s2: 123, s1: 157 },
+  5:  { s3: 190, s2: 240, s1: 307 },
+  6:  { s3: 244, s2: 308, s1: 394 },
+  7:  { s3: 250, s2: 316, s1: 403 },
+  8:  { s3: 305, s2: 385, s1: 492 },
+  9:  { s3: 325, s2: 410, s1: 523 },
+  10: { s3: 403, s2: 508, s1: 649 },
+};
+
+function computeStars(stageId, rolls){
+  if(rolls==null) return 0;
+  const c = STAR_CUTS[stageId];
+  if(!c) return 0;
+  if(rolls <= c.s3) return 3;
+  if(rolls <= c.s2) return 2;
+  if(rolls <= c.s1) return 1;
+  return 0;
+}
+
+// --- Active stage (globals used by existing core code) ---
+let CURRENT_STAGE_ID = 10;
+let BOARD_W = STAGES[9].boardW;
+let BOARD_H = STAGES[9].boardH;
+let TARGET_W = STAGES[9].targetW;
+let TARGET_H = STAGES[9].targetH;
+let TARGET_OX = STAGES[9].targetOX;
+let TARGET_OY = STAGES[9].targetOY;
+let START_X = STAGES[9].startX;
+let START_Y = STAGES[9].startY;
+let START_CELLS = STAGES[9].startCells || [];
+let DROP_Y = STAGES[9].dropY;
+let currentTargetGrid = STAGES[9].targetGrid;
+let currentBlockType = STAGES[9].blockType;
+
+function stageKeyOf(id){ return `STAGE_${id}`; }
+
+/* =========================
+   ORIENTATION (Chaos Cube - Fixed Start)
+========================= */
+function makeMonoYellowOrientation(){
+  return { top:"Y", bottom:"Y", left:"Y", right:"Y", front:"Y", back:"Y" };
+}
+function makeTwoColorAdjOrientation(){
+  // Adjacent 3 faces Y + adjacent 3 faces R (three meeting at a corner)
+  // Here: Top/Front/Right = Y, Bottom/Back/Left = R
+  return { top:"Y", bottom:"R", left:"R", right:"Y", front:"Y", back:"R" };
+}
+function makeBalancedOrientation(){
+  // 3-color paired: Top/Bottom=R, Left/Right=Y, Front/Back=B
+  return { top:"R", bottom:"R", left:"Y", right:"Y", front:"B", back:"B" };
+}
+function makeSixColorOrientation(){
+  // 6-color fixed: Top=R, Front=B, Right=G, Left=Y, Back=P, Bottom=O
+  return { top:"R", bottom:"O", left:"Y", right:"G", front:"B", back:"P" };
+}
+function makeStartOrientation(){
+  if(currentBlockType === "MONO_Y_1") return makeMonoYellowOrientation();
+  if(currentBlockType === "ADJ_2_YR") return makeTwoColorAdjOrientation();
+  if(currentBlockType === "BALANCED_3_PAIRED") return makeBalancedOrientation();
+  return makeSixColorOrientation();
+}
+
+function rollOrientation(ori, dir){
+  const {top,bottom,left,right,front,back} = ori;
+  // NOTE: mapping is aligned to the visual roll animation directions in animateRoll()
+  // up    : move to y-1 (toward -Z on screen) => same as a "forward" roll in our pivot rotation
+  // down  : move to y+1 => inverse
+  if(dir==="up"){
+    // forward roll: back -> top -> front -> bottom -> back
+    ori.top = back;      ori.bottom = front;
+    ori.front = top;     ori.back = bottom;
+  } else if(dir==="down"){
+    // backward roll (inverse)
+    ori.top = front;     ori.bottom = back;
+    ori.front = bottom;  ori.back = top;
+  } else if(dir==="left"){
+    ori.top = right;     ori.bottom = left;
+    ori.left = top;      ori.right = bottom;
+  } else if(dir==="right"){
+    ori.top = left;      ori.bottom = right;
+    ori.left = bottom;   ori.right = top;
+  }
+}
+
+/* =========================
+   THREE SETUP
+========================= */
+const canvas = document.getElementById("c");
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+if ("outputColorSpace" in renderer) renderer.outputColorSpace = THREE.SRGBColorSpace;
+if ("toneMapping" in renderer) renderer.toneMapping = THREE.NoToneMapping;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xffffff);
+
+// lights (안 보이는 문제 방지: 밝게)
+scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+const dl1 = new THREE.DirectionalLight(0xffffff, 1.1);
+dl1.position.set(8, 14, 8);
+scene.add(dl1);
+const dl2 = new THREE.DirectionalLight(0xffffff, 0.65);
+dl2.position.set(-8, 10, -6);
+scene.add(dl2);
+
+const _boardCenter = new THREE.Vector3();
+const _viewCenter  = new THREE.Vector3();
+const BOARD_VISUAL_OFFSET = new THREE.Vector3(0, 0, -2.8); // visual-only offset (boardRoot shift)
+const VIEW_CENTER_OFFSET  = new THREE.Vector3(0, 0, 1.1); // framing bias (neg Z lifts board in view)
+
+function getBoardCenter(){
+  _boardCenter.set((BOARD_W-1)/2, 0, (BOARD_H-1)/2).add(BOARD_VISUAL_OFFSET);
+  return _boardCenter;
+}
+function getViewCenter(){
+  _viewCenter.copy(getBoardCenter()).add(VIEW_CENTER_OFFSET);
+  return _viewCenter;
+}
+
+// Camera (Perspective only, fixed front)
+const camPER = new THREE.PerspectiveCamera(24, 1, 0.1, 300);
+let activeCam = camPER;
+const YAW_DEG = 0; // fixed front
+let pitchDeg = 58;
+
+/* =========================
+   UI
+========================= */
+const lockBtn = document.getElementById("lockBtn") || { disabled:true, style:{}, onclick:null };
+const statusEl = document.getElementById("status");
+const storageHintEl = document.getElementById("storageHint");
+const saveNowBtn = document.getElementById("saveNowBtn");
+const resetStageBtn = document.getElementById("resetStageBtn");
+const resetAllBtn = document.getElementById("resetAllBtn");
+
+
+/* =========================
+   LOCAL STORAGE (Stage Progress)
+   - Stored per-stage:
+     cleared, stars(0~3),
+     bestTimeMs / lastTimeMs,
+     bestRolls / lastRolls
+   - Global:
+     adminMode, currentStageId
+   - Unlock is computed (not stored)
+========================= */
+const LOCAL_SAVE_KEY = "vibe_block_stage_progress_v2";
+
+// runtime: timer + roll counter (for last/best)
+let runStartMs = null;
+let runRolls = 0;
+
+function nowMs(){ return performance.now(); }
+
+function defaultSave(){
+  return {
+    version: 2,
+    adminMode: false,
+    // Default to stage 1 for a fresh save.
+    currentStageId: 1,
+    stages: {}
+  };
+}
+
+function loadSave(){
+  try{
+    const raw = localStorage.getItem(LOCAL_SAVE_KEY);
+    if(!raw) return defaultSave();
+    const obj = JSON.parse(raw);
+    if(!obj || typeof obj !== "object") return defaultSave();
+    if(typeof obj.adminMode !== "boolean") obj.adminMode = false;
+    if(typeof obj.currentStageId !== "number") obj.currentStageId = 1;
+    if(!obj.stages || typeof obj.stages !== "object") obj.stages = {};
+    return obj;
+  }catch(_){
+    return defaultSave();
+  }
+}
+
+function saveSave(data){
+  localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(data));
+}
+
+function getStageProgressById(id){
+  const save = loadSave();
+  return save.stages[stageKeyOf(id)] || null;
+}
+
+function upsertStageProgressById(id, patch){
+  const save = loadSave();
+  const k = stageKeyOf(id);
+  const prev = save.stages[k] || { cleared:false, stars:0, bestTimeMs:null, lastTimeMs:null, bestRolls:null, lastRolls:null };
+  save.stages[k] = { ...prev, ...patch, updatedAt: Date.now() };
+  saveSave(save);
+  return save.stages[k];
+}
+
+function resetStageProgressById(id){
+  const save = loadSave();
+  delete save.stages[stageKeyOf(id)];
+  saveSave(save);
+}
+
+function resetAllProgress(){
+  localStorage.removeItem(LOCAL_SAVE_KEY);
+}
+
+function isStageCleared(id){
+  const p = getStageProgressById(id);
+  return !!(p && p.cleared);
+}
+
+function isStageUnlocked(id){
+  const save = loadSave();
+  if(save.adminMode) return true;
+  if(id === 1) return true;
+  return isStageCleared(id-1);
+}
+
+function getAdminMode(){
+  return loadSave().adminMode;
+}
+function setAdminMode(v){
+  const save = loadSave();
+  save.adminMode = !!v;
+  saveSave(save);
+}
+
+function getSavedCurrentStageId(){
+  return loadSave().currentStageId || 1;
+}
+function setSavedCurrentStageId(id){
+  const save = loadSave();
+  save.currentStageId = id;
+  saveSave(save);
+}
+
+function updateStorageHint(extra=""){
+  const save = loadSave();
+  const p = getStageProgressById(CURRENT_STAGE_ID);
+  const best = p?.bestTimeMs!=null ? (p.bestTimeMs/1000).toFixed(2)+"s" : "-";
+  const last = p?.lastTimeMs!=null ? (p.lastTimeMs/1000).toFixed(2)+"s" : "-";
+  const bestR = (p?.bestRolls!=null) ? p.bestRolls : "-";
+  const lastR = (p?.lastRolls!=null) ? p.lastRolls : "-";
+  const summary = p ? (p.cleared ? `cleared ✅  best=${best}(${bestR}roll)` : `not cleared (last=${last}/${lastR}roll)`) : "no record";
+  storageHintEl.textContent = `stage: ${CURRENT_STAGE_ID}  |  admin=${save.adminMode ? "ON":"OFF"}  |  ${summary}${extra ? "  |  "+extra : ""}`;
+}
+
+updateStorageHint();
+
+/* =========================
+   STAGE UI + LOADING
+========================= */
+const stageLabelEl = document.getElementById("stageLabel");
+const stageGridEl = document.getElementById("stageGrid");
+const adminModeBtn = document.getElementById("adminModeBtn");
+
+// Render stage buttons
+function renderStageButtons(){
+  const save = loadSave();
+  stageGridEl.innerHTML = "";
+  for(const s of STAGES){
+    const unlocked = isStageUnlocked(s.id);
+    const p = getStageProgressById(s.id);
+    const stars = Math.max(0, Math.min(3, p?.stars ?? 0));
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "stageBtn" + (unlocked ? "" : " locked");
+    btn.innerHTML = `<span>${s.name}</span><span class="stars">${"★".repeat(stars)}${"☆".repeat(3-stars)}</span>`;
+    btn.disabled = !unlocked;
+    btn.onclick = ()=>{
+      if(!isStageUnlocked(s.id)) return;
+      setStage(s.id, {fromUser:true});
+    };
+    stageGridEl.appendChild(btn);
+  }
+  adminModeBtn.textContent = save.adminMode ? "관리자 모드 해제" : "관리자 모드로 전환";
+}
+
+adminModeBtn.onclick = ()=>{
+  const cur = getAdminMode();
+  setAdminMode(!cur);
+  renderStageButtons();
+  updateStorageHint();
+};
+
+// Apply stage config and rebuild board/state
+function applyStageConfig(s){
+  BOARD_W = s.boardW;
+  BOARD_H = s.boardH;
+  TARGET_W = s.targetW;
+  TARGET_H = s.targetH;
+  TARGET_OX = s.targetOX;
+  TARGET_OY = s.targetOY;
+  START_X = s.startX;
+  START_Y = s.startY;
+  START_CELLS = s.startCells || [];
+  DROP_Y = s.dropY;
+  currentTargetGrid = s.targetGrid;
+  currentBlockType = s.blockType;
+}
+
+function setStage(id, {fromUser=false}={}){
+  const s = STAGES.find(x=>x.id===id) || STAGES[9];
+  CURRENT_STAGE_ID = s.id;
+  setSavedCurrentStageId(CURRENT_STAGE_ID);
+  applyStageConfig(s);
+  stageLabelEl.textContent = s.name;
+  // reset game state to READY (do not touch movement/color core)
+  resetAll();
+  enterReady();
+
+  // Refresh "매칭 가능성" panel immediately on stage switch.
+  // (It updates again on spawn; this just prevents a stale/empty panel.)
+  try{
+    const pick = pickBestSpawnX();
+    lastSpawnAnalysis = pick?.analysis ?? lastSpawnAnalysis;
+  }catch(e){ /* ignore */ }
+  updateUI();
+
+  renderStageButtons();
+  updateStorageHint(fromUser ? "stage switched" : "");
+}
+
+// Initial stage: load last unlocked stage (computed).
+function computeLastUnlockedStageId(){
+  const save = loadSave();
+  if(save.adminMode) return 10;
+  let last = 1;
+  for(let i=2;i<=10;i++){
+    const prev = save.stages[stageKeyOf(i-1)];
+    if(prev && prev.cleared) last = i;
+    else break;
+  }
+  return last;
+}
+function selectInitialStageId(){
+  const save = loadSave();
+  const hasAny = Object.keys(save.stages||{}).length>0;
+  if(!hasAny) return 1;
+  return computeLastUnlockedStageId();
+}
+CURRENT_STAGE_ID = selectInitialStageId();
+setSavedCurrentStageId(CURRENT_STAGE_ID);
+applyStageConfig(STAGES[CURRENT_STAGE_ID-1]);
+stageLabelEl.textContent = STAGES[CURRENT_STAGE_ID-1].name;
+renderStageButtons();
+
+// Prime match-analysis panel on initial load
+try{
+  const pick = pickBestSpawnX();
+  lastSpawnAnalysis = pick?.analysis ?? lastSpawnAnalysis;
+}catch(e){ /* ignore */ }
+
+
+
+// HUD (bottom-center)
+const startBtn = document.getElementById("startBtn");
+const confirmBtn = document.getElementById("confirmBtn");
+
+
+// === Stage 1 Tutorial Overlay ===
+const tutorialArrowEl = document.getElementById('tutorialArrow');
+const tutorialTextEl  = document.getElementById('tutorialText');
+
+// Inline SVG for a thick arrow (matches mock)
+if(tutorialArrowEl){
+  tutorialArrowEl.innerHTML = `
+    <svg viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path fill="rgba(0,0,0,0.35)" d="M50 0 L90 45 H66 V140 H34 V45 H10 Z"/>
+    </svg>
+  `;
+}
+
+let tutorialVisible = false;
+let tutorialAnchored = false;
+
+function isStage1TutorialEligible(){
+  if(CURRENT_STAGE_ID !== 1) return false;
+  if(getAdminMode()) return false;
+  const p = getStageProgressById(1);
+  // Show only the very first time the player starts Stage 1 (until they move once)
+  return !(p && p.tutorialMoved);
+}
+
+function showStage1Tutorial(){
+  if(!tutorialArrowEl || !tutorialTextEl) return;
+  tutorialVisible = true;
+  tutorialAnchored = true;
+  tutorialArrowEl.style.display = 'block';
+  tutorialTextEl.style.display = 'block';
+}
+
+function hideStage1Tutorial(markDone=true){
+  if(!tutorialArrowEl || !tutorialTextEl) return;
+  tutorialVisible = false;
+  tutorialAnchored = false;
+  tutorialArrowEl.style.display = 'none';
+  tutorialTextEl.style.display = 'none';
+  if(markDone && CURRENT_STAGE_ID === 1){
+    upsertStageProgressById(1, { tutorialMoved:true });
+  }
+}
+
+function updateStage1TutorialAnchor(){
+  if(!tutorialVisible || !tutorialAnchored) return;
+  if(!activeGroup) return;
+
+  const wp = new THREE.Vector3(activeGroup.position.x, activeGroup.position.y + 1.25, activeGroup.position.z);
+  wp.project(activeCam);
+
+  const canvasRect = renderer.domElement.getBoundingClientRect();
+  const gameRect = document.querySelector('.game').getBoundingClientRect();
+
+  const sx = (wp.x * 0.5 + 0.5) * canvasRect.width + canvasRect.left;
+  const sy = (-wp.y * 0.5 + 0.5) * canvasRect.height + canvasRect.top;
+
+  tutorialArrowEl.style.left = (sx - gameRect.left) + 'px';
+  tutorialArrowEl.style.top  = (sy - gameRect.top) + 'px';
+}
+const clearText = document.getElementById("clearText");
+
+/* =========================
+   RESIZE
+========================= */
+function resize(){
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  renderer.setSize(w, h, false);
+  camPER.aspect = w / h;
+  camPER.updateProjectionMatrix();
+  fitPER();
+}
+window.addEventListener("resize", resize);
+
+/* =========================
+   BOARD
+========================= */
+const goals = new Map();
+const key = (x,y)=>`${x},${y}`;
+
+const boardRoot = new THREE.Group();
+// 화면 상단(스테이지 라벨 바로 아래) 쪽에 보드가 오도록 시각적 오프셋만 적용
+boardRoot.position.copy(BOARD_VISUAL_OFFSET);
+scene.add(boardRoot);
+
+const tileGroup = new THREE.Group();
+boardRoot.add(tileGroup);
+
+const tilePlane = new THREE.PlaneGeometry(1,1);
+const matWhite = new THREE.MeshBasicMaterial({ color: HEX.W });
+const matBeige = new THREE.MeshBasicMaterial({ color: HEX.W });
+const matR = new THREE.MeshBasicMaterial({ color: HEX.R });
+const matY = new THREE.MeshBasicMaterial({ color: HEX.Y });
+const matB = new THREE.MeshBasicMaterial({ color: HEX.B });
+const matStart = new THREE.MeshBasicMaterial({ color: 0xffffff }); // start tiles (white)
+
+// 목표 타일은 50% 밝게(흰색과 50% 믹스)
+const matGoalR = new THREE.MeshBasicMaterial({ color: mixWithWhite(HEX.R, 0.5) });
+const matGoalY = new THREE.MeshBasicMaterial({ color: mixWithWhite(HEX.Y, 0.5) });
+const matGoalB = new THREE.MeshBasicMaterial({ color: mixWithWhite(HEX.B, 0.5) });
+const matGoalO = new THREE.MeshBasicMaterial({ color: mixWithWhite(HEX.O, 0.5) });
+const matGoalG = new THREE.MeshBasicMaterial({ color: mixWithWhite(HEX.G, 0.5) });
+const matGoalP = new THREE.MeshBasicMaterial({ color: mixWithWhite(HEX.P, 0.5) });
+
+function tileMatFor(c){
+  if(c==="R") return matGoalR;
+  if(c==="O") return matGoalO;
+  if(c==="Y") return matGoalY;
+  if(c==="G") return matGoalG;
+  if(c==="B") return matGoalB;
+  if(c==="P") return matGoalP;
+  return matWhite;
+}
+
+function buildBoard(){
+  tileGroup.clear();
+  goals.clear();
+
+  // quick lookup for start tiles
+  const startSet = new Set((START_CELLS||[]).map(([x,y])=>key(x,y)));
+
+  for(let y=0;y<BOARD_H;y++){
+    for(let x=0;x<BOARD_W;x++){
+      let mat = matWhite;
+
+      // 1) start tiles (dark gray)
+      if(startSet.has(key(x,y))){
+        mat = matStart;
+      }
+
+      // 2) goal tiles (tint) — goals override start visually only if ever overlapped
+      const row = currentTargetGrid?.[y];
+      const c = row?.[x] ?? "W";
+      if(c !== "W" && c !== "."){
+        mat = tileMatFor(c);
+        goals.set(key(x,y), {color:c});
+      }
+
+      const m = new THREE.Mesh(tilePlane, mat);
+      m.rotation.x = -Math.PI/2;
+      m.position.set(x, 0, y);
+      tileGroup.add(m);
+    }
+  }
+
+  // grid lines
+  const lineMat = new THREE.LineBasicMaterial({ color: HEX.GRID, transparent:true, opacity:0.55 });
+  const pts = [];
+  for(let x=0;x<=BOARD_W;x++){
+    pts.push(new THREE.Vector3(x-0.5, 0.001, -0.5), new THREE.Vector3(x-0.5, 0.001, BOARD_H-0.5));
+  }
+  for(let y=0;y<=BOARD_H;y++){
+    pts.push(new THREE.Vector3(-0.5, 0.001, y-0.5), new THREE.Vector3(BOARD_W-0.5, 0.001, y-0.5));
+  }
+  tileGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), lineMat));
+}
+
+/* =========================
+   GLB (embedded) → Cube prefab
+========================= */
+const GLB_BASE64 = "Z2xURgIAAADkNAAAQBcAAEpTT057ImFzc2V0Ijp7ImdlbmVyYXRvciI6Iktocm9ub3MgZ2xURiBCbGVuZGVyIEkvTyB2NC4yLjYwIiwidmVyc2lvbiI6IjIuMCJ9LCJzY2VuZSI6MCwic2NlbmVzIjpbeyJuYW1lIjoiU2NlbmUiLCJub2RlcyI6WzAsMSwyLDMsNCw1XX1dLCJub2RlcyI6W3sibWVzaCI6MCwibmFtZSI6IkZhY2VfVG9wIn0seyJtZXNoIjoxLCJuYW1lIjoiRmFjZV9Gcm9udCJ9LHsibWVzaCI6MiwibmFtZSI6IkZhY2VfbGVmdCJ9LHsibWVzaCI6MywibmFtZSI6IkZhY2VfQmFjayJ9LHsibWVzaCI6NCwibmFtZSI6IkZhY2VfUmlnaHQifSx7Im1lc2giOjUsIm5hbWUiOiJGYWNlX0JvdHRvbSJ9XSwibWF0ZXJpYWxzIjpbeyJkb3VibGVTaWRlZCI6dHJ1ZSwibmFtZSI6Ik1hdGVyaWFsLjAwMSIsInBick1ldGFsbGljUm91Z2huZXNzIjp7ImJhc2VDb2xvckZhY3RvciI6WzAuNzkwNDMwMTg4MTc5MDE2MSwwLjgwMDA3ODUxMTIzODA5ODEsMC4wMDQyMTAyMTEzMzY2MTI3MDEsMV0sIm1ldGFsbGljRmFjdG9yIjowLCJyb3VnaG5lc3NGYWN0b3IiOjAuNX19LHsiZG91YmxlU2lkZWQiOnRydWUsIm5hbWUiOiJNYXRlcmlhbC4wMDUiLCJwYnJNZXRhbGxpY1JvdWdobmVzcyI6eyJiYXNlQ29sb3JGYWN0b3IiOlswLjgwMDQ4OTkwMjQ5NjMzNzksMC4xOTkxNjIzMDQ0MDEzOTc3LDAsMV0sIm1ldGFsbGljRmFjdG9yIjowLCJyb3VnaG5lc3NGYWN0b3IiOjAuNX19LHsiZG91YmxlU2lkZWQiOnRydWUsIm5hbWUiOiJNYXRlcmlhbC4wMDYiLCJwYnJNZXRhbGxpY1JvdWdobmVzcyI6eyJiYXNlQ29sb3JGYWN0b3IiOlswLDAuODAwMTk2NTg4MDM5Mzk4MiwwLjA0NDUyOTk0NDY1ODI3OTQyLDFdLCJtZXRhbGxpY0ZhY3RvciI6MCwicm91Z2huZXNzRmFjdG9yIjowLjV9fSx7ImRvdWJsZVNpZGVkIjp0cnVlLCJuYW1lIjoiTWF0ZXJpYWwuMDAyIiwicGJyTWV0YWxsaWNSb3VnaG5lc3MiOnsiYmFzZUNvbG9yRmFjdG9yIjpbMC4wMTkwODM1MDU0OTYzODI3MTMsMC4xMTg3Mjk3ODUwODQ3MjQ0MywwLjgwMDMzODc0NTExNzE4NzUsMV0sIm1ldGFsbGljRmFjdG9yIjowLCJyb3VnaG5lc3NGYWN0b3IiOjAuNX19LHsiZG91YmxlU2lkZWQiOnRydWUsIm5hbWUiOiJNYXRlcmlhbC4wMDMiLCJwYnJNZXRhbGxpY1JvdWdobmVzcyI6eyJiYXNlQ29sb3JGYWN0b3IiOlswLjgwMDM3Nzg0NTc2NDE2MDIsMC4wNDA1MDMyNTIyOTc2Mzk4NSwwLjAwNDI5ODg5MDk0MDg0NTAxMywxXSwibWV0YWxsaWNGYWN0b3IiOjAsInJvdWdobmVzc0ZhY3RvciI6MC41fX0seyJkb3VibGVTaWRlZCI6dHJ1ZSwibmFtZSI6Ik1hdGVyaWFsLjAwNyIsInBick1ldGFsbGljUm91Z2huZXNzIjp7ImJhc2VDb2xvckZhY3RvciI6WzAuMTk2OTcwNDAzMTk0NDI3NSwwLDAuODAwMTMzNDY2NzIwNTgxLDFdLCJtZXRhbGxpY0ZhY3RvciI6MCwicm91Z2huZXNzRmFjdG9yIjowLjV9fV0sIm1lc2hlcyI6W3sibmFtZSI6IkN1YmUuMDAxIiwicHJpbWl0aXZlcyI6W3siYXR0cmlidXRlcyI6eyJQT1NJVElPTiI6MCwiTk9STUFMIjoxLCJURVhDT09SRF8wIjoyfSwiaW5kaWNlcyI6MywibWF0ZXJpYWwiOjB9XX0seyJuYW1lIjoiQ3ViZS4wMDIiLCJwcmltaXRpdmVzIjpbeyJhdHRyaWJ1dGVzIjp7IlBPU0lUSU9OIjo0LCJOT1JNQUwiOjUsIlRFWENPT1JEXzAiOjZ9LCJpbmRpY2VzIjo3LCJtYXRlcmlhbCI6MX1dfSx7Im5hbWUiOiJDdWJlLjAwMyIsInByaW1pdGl2ZXMiOlt7ImF0dHJpYnV0ZXMiOnsiUE9TSVRJT04iOjgsIk5PUk1BTCI6OSwiVEVYQ09PUkRfMCI6MTB9LCJpbmRpY2VzIjoxMSwibWF0ZXJpYWwiOjJ9XX0seyJuYW1lIjoiQ3ViZS4wMDQiLCJwcmltaXRpdmVzIjpbeyJhdHRyaWJ1dGVzIjp7IlBPU0lUSU9OIjoxMiwiTk9STUFMIjoxMywiVEVYQ09PUkRfMCI6MTR9LCJpbmRpY2VzIjoxNSwibWF0ZXJpYWwiOjN9XX0seyJuYW1lIjoiQ3ViZS4wMDUiLCJwcmltaXRpdmVzIjpbeyJhdHRyaWJ1dGVzIjp7IlBPU0lUSU9OIjoxNiwiTk9STUFMIjoxNywiVEVYQ09PUkRfMCI6MTh9LCJpbmRpY2VzIjoxOSwibWF0ZXJpYWwiOjR9XX0seyJuYW1lIjoiQ3ViZS4wMDYiLCJwcmltaXRpdmVzIjpbeyJhdHRyaWJ1dGVzIjp7IlBPU0lUSU9OIjoyMCwiTk9STUFMIjoyMSwiVEVYQ09PUkRfMCI6MjJ9LCJpbmRpY2VzIjoyMywibWF0ZXJpYWwiOjV9XX1dLCJhY2Nlc3NvcnMiOlt7ImJ1ZmZlclZpZXciOjAsImNvbXBvbmVudFR5cGUiOjUxMjYsImNvdW50IjozNiwibWF4IjpbMC45MzAwMDAwMDcxNTI1NTc0LDIsMC45MzAwMDAwMDcxNTI1NTc0XSwibWluIjpbLTAuOTMwMDAwMDA3MTUyNTU3NCwxLjkzMDAwMDA2Njc1NzIwMjEsLTAuOTMwMDAwMDA3MTUyNTU3NF0sInR5cGUiOiJWRUMzIn0seyJidWZmZXJWaWV3IjoxLCJjb21wb25lbnRUeXBlIjo1MTI2LCJjb3VudCI6MzYsInR5cGUiOiJWRUMzIn0seyJidWZmZXJWaWV3IjoyLCJjb21wb25lbnRUeXBlIjo1MTI2LCJjb3VudCI6MzYsInR5cGUiOiJWRUMyIn0seyJidWZmZXJWaWV3IjozLCJjb21wb25lbnRUeXBlIjo1MTIzLCJjb3VudCI6NTQsInR5cGUiOiJTQ0FMQVIifSx7ImJ1ZmZlclZpZXciOjQsImNvbXBvbmVudFR5cGUiOjUxMjYsImNvdW50IjozNiwibWF4IjpbMC45MzAwMDAwMDcxNTI1NTc0LDEuOTMwMDAwMDY2NzU3MjAyMSwxXSwibWluIjpbLTAuOTMwMDAwMDA3MTUyNTU3NCwwLjA2OTk5OTk5Mjg0NzQ0MjYzLDAuOTMwMDAwMDA3MTUyNTU3NF0sInR5cGUiOiJWRUMzIn0seyJidWZmZXJWaWV3Ijo1LCJjb21wb25lbnRUeXBlIjo1MTI2LCJjb3VudCI6MzYsInR5cGUiOiJWRUMzIn0seyJidWZmZXJWaWV3Ijo2LCJjb21wb25lbnRUeXBlIjo1MTI2LCJjb3VudCI6MzYsInR5cGUiOiJWRUMyIn0seyJidWZmZXJWaWV3Ijo3LCJjb21wb25lbnRUeXBlIjo1MTIzLCJjb3VudCI6NTQsInR5cGUiOiJTQ0FMQVIifSx7ImJ1ZmZlclZpZXciOjgsImNvbXBvbmVudFR5cGUiOjUxMjYsImNvdW50IjozNiwibWF4IjpbLTAuOTMwMDAwMDA3MTUyNTU3NCwxLjkzMDAwMDA2Njc1NzIwMjEsMC45MzAwMDAwMDcxNTI1NTc0XSwibWluIjpbLTEsMC4wNjk5OTk5OTI4NDc0NDI2MywtMC45MzAwMDAwMDcxNTI1NTc0XSwidHlwZSI6IlZFQzMifSx7ImJ1ZmZlclZpZXciOjksImNvbXBvbmVudFR5cGUiOjUxMjYsImNvdW50IjozNiwidHlwZSI6IlZFQzMifSx7ImJ1ZmZlclZpZXciOjEwLCJjb21wb25lbnRUeXBlIjo1MTI2LCJjb3VudCI6MzYsInR5cGUiOiJWRUMyIn0seyJidWZmZXJWaWV3IjoxMSwiY29tcG9uZW50VHlwZSI6NTEyMywiY291bnQiOjU0LCJ0eXBlIjoiU0NBTEFSIn0seyJidWZmZXJWaWV3IjoxMiwiY29tcG9uZW50VHlwZSI6NTEyNiwiY291bnQiOjM2LCJtYXgiOlswLjkzMDAwMDAwNzE1MjU1NzQsMS45MzAwMDAwNjY3NTcyMDIxLC0wLjkzMDAwMDAwNzE1MjU1NzRdLCJtaW4iOlstMC45MzAwMDAwMDcxNTI1NTc0LDAuMDY5OTk5OTkyODQ3NDQyNjMsLTFdLCJ0eXBlIjoiVkVDMyJ9LHsiYnVmZmVyVmlldyI6MTMsImNvbXBvbmVudFR5cGUiOjUxMjYsImNvdW50IjozNiwidHlwZSI6IlZFQzMifSx7ImJ1ZmZlclZpZXciOjE0LCJjb21wb25lbnRUeXBlIjo1MTI2LCJjb3VudCI6MzYsInR5cGUiOiJWRUMyIn0seyJidWZmZXJWaWV3IjoxNSwiY29tcG9uZW50VHlwZSI6NTEyMywiY291bnQiOjU0LCJ0eXBlIjoiU0NBTEFSIn0seyJidWZmZXJWaWV3IjoxNiwiY29tcG9uZW50VHlwZSI6NTEyNiwiY291bnQiOjM2LCJtYXgiOlsxLDEuOTMwMDAwMDY2NzU3MjAyMSwwLjkzMDAwMDAwNzE1MjU1NzRdLCJtaW4iOlswLjkzMDAwMDAwNzE1MjU1NzQsMC4wNjk5OTk5OTI4NDc0NDI2MywtMC45MzAwMDAwMDcxNTI1NTc0XSwidHlwZSI6IlZFQzMifSx7ImJ1ZmZlclZpZXciOjE3LCJjb21wb25lbnRUeXBlIjo1MTI2LCJjb3VudCI6MzYsInR5cGUiOiJWRUMzIn0seyJidWZmZXJWaWV3IjoxOCwiY29tcG9uZW50VHlwZSI6NTEyNiwiY291bnQiOjM2LCJ0eXBlIjoiVkVDMiJ9LHsiYnVmZmVyVmlldyI6MTksImNvbXBvbmVudFR5cGUiOjUxMjMsImNvdW50Ijo1NCwidHlwZSI6IlNDQUxBUiJ9LHsiYnVmZmVyVmlldyI6MjAsImNvbXBvbmVudFR5cGUiOjUxMjYsImNvdW50IjozNiwibWF4IjpbMC45MzAwMDAwMDcxNTI1NTc0LDAuMDY5OTk5OTkyODQ3NDQyNjMsMC45MzAwMDAwMDcxNTI1NTc0XSwibWluIjpbLTAuOTMwMDAwMDA3MTUyNTU3NCwwLC0wLjkzMDAwMDAwNzE1MjU1NzRdLCJ0eXBlIjoiVkVDMyJ9LHsiYnVmZmVyVmlldyI6MjEsImNvbXBvbmVudFR5cGUiOjUxMjYsImNvdW50IjozNiwidHlwZSI6IlZFQzMifSx7ImJ1ZmZlclZpZXciOjIyLCJjb21wb25lbnRUeXBlIjo1MTI2LCJjb3VudCI6MzYsInR5cGUiOiJWRUMyIn0seyJidWZmZXJWaWV3IjoyMywiY29tcG9uZW50VHlwZSI6NTEyMywiY291bnQiOjU0LCJ0eXBlIjoiU0NBTEFSIn1dLCJidWZmZXJWaWV3cyI6W3siYnVmZmVyIjowLCJieXRlTGVuZ3RoIjo0MzIsImJ5dGVPZmZzZXQiOjAsInRhcmdldCI6MzQ5NjJ9LHsiYnVmZmVyIjowLCJieXRlTGVuZ3RoIjo0MzIsImJ5dGVPZmZzZXQiOjQzMiwidGFyZ2V0IjozNDk2Mn0seyJidWZmZXIiOjAsImJ5dGVMZW5ndGgiOjI4OCwiYnl0ZU9mZnNldCI6ODY0LCJ0YXJnZXQiOjM0OTYyfSx7ImJ1ZmZlciI6MCwiYnl0ZUxlbmd0aCI6MTA4LCJieXRlT2Zmc2V0IjoxMTUyLCJ0YXJnZXQiOjM0OTYzfSx7ImJ1ZmZlciI6MCwiYnl0ZUxlbmd0aCI6NDMyLCJieXRlT2Zmc2V0IjoxMjYwLCJ0YXJnZXQiOjM0OTYyfSx7ImJ1ZmZlciI6MCwiYnl0ZUxlbmd0aCI6NDMyLCJieXRlT2Zmc2V0IjoxNjkyLCJ0YXJnZXQiOjM0OTYyfSx7ImJ1ZmZlciI6MCwiYnl0ZUxlbmd0aCI6Mjg4LCJieXRlT2Zmc2V0IjoyMTI0LCJ0YXJnZXQiOjM0OTYyfSx7ImJ1ZmZlciI6MCwiYnl0ZUxlbmd0aCI6MTA4LCJieXRlT2Zmc2V0IjoyNDEyLCJ0YXJnZXQiOjM0OTYzfSx7ImJ1ZmZlciI6MCwiYnl0ZUxlbmd0aCI6NDMyLCJieXRlT2Zmc2V0IjoyNTIwLCJ0YXJnZXQiOjM0OTYyfSx7ImJ1ZmZlciI6MCwiYnl0ZUxlbmd0aCI6NDMyLCJieXRlT2Zmc2V0IjoyOTUyLCJ0YXJnZXQiOjM0OTYyfSx7ImJ1ZmZlciI6MCwiYnl0ZUxlbmd0aCI6Mjg4LCJieXRlT2Zmc2V0IjozMzg0LCJ0YXJnZXQiOjM0OTYyfSx7ImJ1ZmZlciI6MCwiYnl0ZUxlbmd0aCI6MTA4LCJieXRlT2Zmc2V0IjozNjcyLCJ0YXJnZXQiOjM0OTYzfSx7ImJ1ZmZlciI6MCwiYnl0ZUxlbmd0aCI6NDMyLCJieXRlT2Zmc2V0IjozNzgwLCJ0YXJnZXQiOjM0OTYyfSx7ImJ1ZmZlciI6MCwiYnl0ZUxlbmd0aCI6NDMyLCJieXRlT2Zmc2V0Ijo0MjEyLCJ0YXJnZXQiOjM0OTYyfSx7ImJ1ZmZlciI6MCwiYnl0ZUxlbmd0aCI6Mjg4LCJieXRlT2Zmc2V0Ijo0NjQ0LCJ0YXJnZXQiOjM0OTYyfSx7ImJ1ZmZlciI6MCwiYnl0ZUxlbmd0aCI6MTA4LCJi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";
+function base64ToArrayBuffer(b64){
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+  return arr.buffer;
+}
+
+let cubePrefab = null; // THREE.Group (centered, scaled, bottom at y=0)
+let cubeReady = false;
+
+function prepareCubePrefab(gltfScene){
+  // Clone as template root
+  const root = gltfScene;
+
+  // Make sure every mesh has its own material we can recolor safely
+  root.traverse((o)=>{
+    if(o.isMesh){
+      o.castShadow = false;
+      o.receiveShadow = false;
+      if(o.material){
+        o.material = o.material.clone();
+        o.material.side = THREE.DoubleSide; // thin faces safety
+        if(o.material.color) o.material.color.convertSRGBToLinear?.(); // harmless if missing
+      }
+    }
+  });
+
+  // Center & scale to CUBE_SIZE, and lift bottom to y=0
+  const box = new THREE.Box3().setFromObject(root);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size);
+  box.getCenter(center);
+
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  const s = CUBE_SIZE / maxDim;
+
+  root.position.sub(center);
+  root.scale.setScalar(s);
+
+  const box2 = new THREE.Box3().setFromObject(root);
+  root.position.y -= box2.min.y; // bottom at 0
+
+  // ✅ Auto-detect face meshes and tag with userData.faceSlot
+  // This makes color mapping robust even if object names differ (001/002... or Groups).
+  // We determine dominant normal direction per mesh in world space and assign Top/Bottom/Left/Right/Front/Back.
+  const rootInv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  root.updateMatrixWorld(true);
+
+  root.traverse((o)=>{
+    if(!o.isMesh || !o.geometry || !o.geometry.attributes || !o.geometry.attributes.normal) return;
+
+    const nAttr = o.geometry.attributes.normal;
+    const nm = new THREE.Matrix3().getNormalMatrix(o.matrixWorld);
+    const sum = new THREE.Vector3(0,0,0);
+    const tmp = new THREE.Vector3();
+
+    // sample normals (stride to keep it light)
+    const step = Math.max(1, Math.floor(nAttr.count / 200));
+    for(let i=0;i<nAttr.count;i+=step){
+      tmp.fromBufferAttribute(nAttr, i);
+      tmp.applyNormalMatrix(nm);
+      sum.add(tmp);
+    }
+    if(sum.lengthSq() < 1e-8) return;
+    sum.normalize();
+
+    const ax = Math.abs(sum.x), ay = Math.abs(sum.y), az = Math.abs(sum.z);
+    let slot = null;
+    if(ay >= ax && ay >= az) slot = (sum.y >= 0) ? "Top" : "Bottom";
+    else if(ax >= ay && ax >= az) slot = (sum.x >= 0) ? "Right" : "Left";
+    else slot = (sum.z >= 0) ? "Back" : "Front";
+
+    o.userData.faceSlot = slot;
+  });
+
+  return root;
+}
+
+function loadCubeOnce(){
+  return new Promise((resolve, reject)=>{
+    const loader = new GLTFLoader();
+    const buf = base64ToArrayBuffer(GLB_BASE64);
+    loader.parse(buf, "", (gltf)=>{
+      cubePrefab = prepareCubePrefab(gltf.scene);
+      cubeReady = true;
+      resolve();
+    }, (err)=>reject(err));
+  });
+}
+
+// Recolor helper: try by name first; fallback to all meshes
+function setPrefabColors(cubeGroup, ori){
+  // 1) Preferred: auto-detected faceSlot tags (copied through clone)
+  const slotToColor = {
+    Top: ori.top, Bottom: ori.bottom,
+    Left: ori.left, Right: ori.right,
+    Front: ori.front, Back: ori.back,
+  };
+
+  let hits = 0;
+  cubeGroup.traverse((o)=>{
+    if(o.isMesh && o.material && o.material.color){
+      const slot = o.userData && o.userData.faceSlot;
+      if(slot && slotToColor[slot]){
+        o.material.color.setHex(HEX[slotToColor[slot]] ?? 0xffffff);
+        hits++;
+      }
+    }
+  });
+
+  // 2) Fallback: name-based (Face_* may be Group or Mesh)
+  if(hits === 0){
+    const map = {
+      "Face_Top": ori.top,
+      "Face_Bottom": ori.bottom,
+      "Face_Left": ori.left,
+      "Face_Right": ori.right,
+      "Face_Front": ori.front,
+      "Face_Back": ori.back,
+    };
+
+    function applyColorToObject(obj, colKey){
+      const hex = HEX[colKey] ?? 0xffffff;
+      if(!obj) return 0;
+      let h = 0;
+      obj.traverse((x)=>{
+        if(x.isMesh && x.material && x.material.color){
+          x.material.color.setHex(hex);
+          h++;
+        }
+      });
+      return h;
+    }
+
+    for(const [n, colKey] of Object.entries(map)){
+      const obj = cubeGroup.getObjectByName(n);
+      hits += applyColorToObject(obj, colKey);
+    }
+  }
+
+  // 3) Last resort: paint everything to top color so gameplay still works
+  if(hits === 0){
+    cubeGroup.traverse((o)=>{
+      if(o.isMesh && o.material && o.material.color){
+        o.material.color.setHex(HEX[ori.top] ?? 0xffffff);
+      }
+    });
+  }
+}
+
+/* =========================
+   GAME STATE
+========================= */
+let activeOri=null;
+let activePos={x:START_X,y:START_Y};
+let activeGroup=null;
+let moving=false;
+
+let gameState = "READY"; // READY | SPAWNING | PLAYING | CLEARING
+
+const occupied=new Set();
+const locked=[];
+
+function buildCubeGroup(ori){
+  const g = new THREE.Group();
+
+  // Visual cube (GLB)
+  const v = cubePrefab.clone(true);
+
+  // clone materials so each cube can recolor independently
+  v.traverse((o)=>{
+    if(o.isMesh && o.material){
+      o.material = o.material.clone();
+      o.material.side = THREE.DoubleSide;
+    }
+  });
+
+  setPrefabColors(v, ori);
+
+  // ✅ Per-instance bottom alignment (prevents "half buried" even if GLB pivot/bbox differs)
+  const box = new THREE.Box3().setFromObject(v);
+  const minY = box.min.y;
+  v.position.set(0, (HOVER_Y - minY), 0);
+
+  g.add(v);
+  return g;
+}
+
+function rebuildActiveVisual(ori){
+  if(!activeGroup) return;
+  const v = activeGroup.children[0];
+  setPrefabColors(v, ori);
+}
+
+function spawnCubeAtStart({drop=true} = {}){
+  // Spawn at the best start tile candidate (BFS coverage score)
+  const pick = pickBestSpawnX();
+  const x = pick.sx;
+  const y = START_Y;
+  activePos = {x, y};
+
+  activeOri = makeStartOrientation();
+
+  activeGroup = buildCubeGroup(activeOri);
+  activeGroup.position.set(activePos.x, drop ? DROP_Y : 0, activePos.y);
+  boardRoot.add(activeGroup);
+
+  if(drop){
+    gameState = "SPAWNING";
+    moving = true;
+    updateHUD();
+    updateUI();
+    const t0 = performance.now();
+    const dur = 420;
+    const y0 = DROP_Y;
+    const tickDrop = (t)=>{
+      const a = Math.min(1, (t - t0) / dur);
+      // easeOutCubic
+      const e = 1 - Math.pow(1-a, 3);
+      if(activeGroup) activeGroup.position.y = y0 * (1-e);
+      if(a < 1){
+        requestAnimationFrame(tickDrop);
+      } else {
+        if(activeGroup) activeGroup.position.y = 0;
+        moving = false;
+
+        // Stage 1 tutorial: show right after first spawn settles (Stage 1 only, until first move)
+        if(typeof isStage1TutorialEligible==='function' && typeof showStage1Tutorial==='function'){
+          if(isStage1TutorialEligible()) showStage1Tutorial();
+        }
+
+        gameState = "PLAYING";
+        updateHUD();
+        updateUI();
+      }
+    };
+    requestAnimationFrame(tickDrop);
+  } else {
+    gameState = "PLAYING";
+    moving = false;
+    updateHUD();
+    updateUI();
+  }
+}
+
+function canMoveTo(nx,ny){
+  if(nx<0||nx>=BOARD_W||ny<0||ny>=BOARD_H) return false;
+  if(occupied.has(key(nx,ny))) return false;
+  return true;
+}
+
+// =========================
+// BFS ANALYSIS (Debug / Spawn selection)
+// =========================
+const COLORS6 = ["R","O","Y","G","B","P"];
+let lastSpawnAnalysis = "";
+
+function escapeHTML(str){
+  return String(str).replace(/[&<>"']/g, (ch)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+}
+
+// analysisText: string with lines like "R: 100% (3/4)" or "R: 완성"
+function renderMatchAnalysisHTML(analysisText){
+  const title = '<div class="statusTitle">매칭 가능성</div>';
+  if(!analysisText || !analysisText.trim()){
+    return title + '<div style="font-size:12px;color:#666">(스폰 후 표시됩니다)</div>';
+  }
+  const lines = analysisText.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  // 2-column layout: 3 + 3
+  const order = ["R","O","Y","G","B","P"];
+  const map = new Map();
+  for(const ln of lines){
+    const m = ln.match(/^([ROYGBP]):\s*(.+)$/);
+    if(m) map.set(m[1], m[2]);
+  }
+  const items = order.map(k=>({k, v: map.get(k) ?? '-'}));
+  const half = Math.ceil(items.length/2);
+  const left = items.slice(0, half);
+  const right = items.slice(half);
+  let html = title + '<div class="matchGrid">';
+  for(let i=0;i<half;i++){
+    const a = left[i];
+    const b = right[i] || null;
+    html += `<div class="matchItem"><span class="k">${a.k}:</span><span class="v">${escapeHTML(a.v)}</span></div>`;
+    if(b){
+      html += `<div class="matchItem"><span class="k">${b.k}:</span><span class="v">${escapeHTML(b.v)}</span></div>`;
+    } else {
+      html += `<div></div>`;
+    }
+  }
+  html += '</div>';
+  return html;
+}
+
+
+function encodeOri(ori){
+  return `${ori.top}${ori.bottom}${ori.left}${ori.right}${ori.front}${ori.back}`;
+}
+function decodeOri(s){
+  return { top:s[0], bottom:s[1], left:s[2], right:s[3], front:s[4], back:s[5] };
+}
+function rollOriEncoded(oriStr, dir){
+  // oriStr: top bottom left right front back
+  const t=oriStr[0], b=oriStr[1], l=oriStr[2], r=oriStr[3], f=oriStr[4], ba=oriStr[5];
+  if(dir==="up"){
+    // forward roll (toward -Z / y-1): back -> top -> front -> bottom
+    return `${ba}${f}${l}${r}${t}${b}`;
+  } else if(dir==="down"){
+    // backward roll (toward +Z / y+1): front -> top -> back -> bottom
+    return `${f}${ba}${l}${r}${b}${t}`;
+  } else if(dir==="left"){
+    // left: right -> top -> left -> bottom
+    return `${r}${l}${t}${b}${f}${ba}`;
+  } else { // right
+    return `${l}${r}${b}${t}${f}${ba}`;
+  }
+}
+
+function computeRemainingTargets(){
+  const rem = {R:[],O:[],Y:[],G:[],B:[],P:[]};
+  for(const [k, g] of goals.entries()){
+    if(occupied.has(k)) continue;
+    const c = g.color;
+    if(rem[c]) rem[c].push(k);
+  }
+  return rem;
+}
+
+function bfsCoverageFromStart(sx){
+  // returns { percByColor, fracByColor, score, minPerc, avgPerc }
+  const rem = computeRemainingTargets();
+  const remCount = {};
+  for(const c of COLORS6) remCount[c] = rem[c].length;
+
+  const startKey = key(sx, START_Y);
+  if(occupied.has(startKey)) {
+    return { valid:false, percByColor:{}, fracByColor:{}, score:-1e9, minPerc:0, avgPerc:0, sx };
+  }
+
+  // BFS over (x,y,oriStr)
+  const q = [];
+  const seen = new Set();
+
+  // Fixed A-orientation at spawn: Top=R Front=B Right=G Left=Y Back=P Bottom=O
+  const startOriStr = "ROYG" + "BP"; // top R, bottom O, left Y, right G, front B, back P
+  q.push({x:sx, y:START_Y, o:startOriStr});
+  seen.add(`${sx},${START_Y},${startOriStr}`);
+
+  // reachable target cells per color (by key)
+  const reach = {R:new Set(),O:new Set(),Y:new Set(),G:new Set(),B:new Set(),P:new Set()};
+
+  const dirs = ["up","down","left","right"];
+  while(q.length){
+    const cur = q.shift();
+    const curTop = cur.o[0];
+
+    const kcur = key(cur.x, cur.y);
+    const g = goals.get(kcur);
+    if(g && !occupied.has(kcur) && g.color === curTop){
+      reach[curTop].add(kcur);
+    }
+
+    for(const d of dirs){
+      const dx = d==="left"?-1 : d==="right"?1 : 0;
+      const dy = d==="up"?-1 : d==="down"?1 : 0;
+      const nx = cur.x + dx;
+      const ny = cur.y + dy;
+      if(nx<0||nx>=BOARD_W||ny<0||ny>=BOARD_H) continue;
+      if(occupied.has(key(nx,ny))) continue;
+
+      const no = rollOriEncoded(cur.o, d);
+      const sid = `${nx},${ny},${no}`;
+      if(seen.has(sid)) continue;
+      seen.add(sid);
+      q.push({x:nx, y:ny, o:no});
+    }
+  }
+
+  const percByColor = {};
+  const fracByColor = {};
+  let score = 0;
+  let minPerc = 100;
+  let sumPerc = 0;
+  let denomColors = 0;
+
+  for(const c of COLORS6){
+    const total = remCount[c];
+    if(total<=0){
+      percByColor[c] = null; // 완성
+      fracByColor[c] = [0,0];
+      continue;
+    }
+    const good = reach[c].size;
+    const perc = Math.round((good / total) * 100);
+    percByColor[c] = perc;
+    fracByColor[c] = [good, total];
+
+    // weighted score: remaining count * perc
+    score += total * perc;
+
+    minPerc = Math.min(minPerc, perc);
+    sumPerc += perc;
+    denomColors += 1;
+  }
+  const avgPerc = denomColors ? Math.round(sumPerc / denomColors) : 0;
+
+  return { valid:true, percByColor, fracByColor, score, minPerc, avgPerc, sx };
+}
+
+function pickBestSpawnX(){
+  // Candidates: 3~4 tiles around center (START_X-1..START_X+2), clamped
+  const cand = [];
+  for(let x=START_X-1; x<=START_X+2; x++){
+    if(x>=0 && x<BOARD_W) cand.push(x);
+  }
+
+  let best = null;
+  const all = [];
+  for(const sx of cand){
+    const r = bfsCoverageFromStart(sx);
+    all.push(r);
+    if(!best) best = r;
+    else {
+      if(r.score > best.score) best = r;
+      else if(r.score === best.score && r.minPerc > best.minPerc) best = r;
+      else if(r.score === best.score && r.minPerc === best.minPerc){
+        // tie-break: closer to center
+        if(Math.abs(r.sx-START_X) < Math.abs(best.sx-START_X)) best = r;
+      }
+    }
+  }
+
+  // build debug text (colors only)
+  let out = ``;
+  if(!best || !best.valid){
+    // no valid candidate -> show 0% for remaining colors
+    for(const c of COLORS6){
+      out += `${c}: -\n`;
+    }
+    lastSpawnAnalysis = out.trimEnd();
+    return { sx: START_X, analysis: lastSpawnAnalysis };
+  }
+  for(const c of COLORS6){
+    const total = best.fracByColor[c][1];
+    if(total<=0){
+      out += `${c}: 완성\n`;
+    } else {
+      const [good, t] = best.fracByColor[c];
+      out += `${c}: ${best.percByColor[c]}% (${good}/${t})\n`;
+    }
+  }
+  lastSpawnAnalysis = out.trimEnd();
+  return { sx: best.sx, analysis: lastSpawnAnalysis };
+}
+
+function animateRoll(dir){
+  if(moving||!activeGroup) return;
+
+  const dx = dir==="left"?-1 : dir==="right"?1 : 0;
+  const dy = dir==="up"?-1 : dir==="down"?1 : 0;
+
+  const nx=activePos.x+dx;
+  const ny=activePos.y+dy;
+  if(!canMoveTo(nx,ny)) return;
+
+  moving=true;
+
+  const pivot=new THREE.Group();
+  boardRoot.add(pivot);
+
+  pivot.position.set(activePos.x+dx*0.5, 0, activePos.y+dy*0.5);
+  activeGroup.position.sub(pivot.position);
+  pivot.add(activeGroup);
+
+  const axis = (dir==="left"||dir==="right") ? new THREE.Vector3(0,0,1) : new THREE.Vector3(1,0,0);
+  const sign = {up:-1, down:+1, left:+1, right:-1}[dir];
+  const target = sign*(Math.PI/2);
+
+  const t0=performance.now();
+  const dur=160;
+
+  function step(now){
+    const t=Math.min(1,(now-t0)/dur);
+    const tt = t<0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2;
+
+    pivot.rotation.set(0,0,0);
+    pivot.rotateOnAxis(axis, target*tt);
+
+    if(t<1){ requestAnimationFrame(step); return; }
+
+    pivot.remove(activeGroup);
+    boardRoot.add(activeGroup);
+    activeGroup.position.add(pivot.position);
+    scene.remove(pivot);
+
+    activePos={x:nx,y:ny};
+    activeGroup.position.set(activePos.x,0,activePos.y);
+
+    rollOrientation(activeOri, dir);
+    // Keep movement stable: we do NOT preserve physical rotation.
+    // Instead, reset transform rotation and repaint faces based on the new logical orientation.
+    activeGroup.rotation.set(0,0,0);
+    rebuildActiveVisual(activeOri);
+
+    moving=false;
+    updateUI();
+  }
+  requestAnimationFrame(step);
+}
+
+function isOnMatchingGoal(){
+  const g = goals.get(key(activePos.x,activePos.y));
+  return !!g && activeOri.top===g.color;
+}
+
+function recolorAllTo(colorKey){
+  const mono = {top:colorKey,bottom:colorKey,left:colorKey,right:colorKey,front:colorKey,back:colorKey};
+  rebuildActiveVisual(mono);
+}
+
+function goalsTotal(){
+  return goals.size;
+}
+function checkClear(){
+  return occupied.size >= goalsTotal() && goalsTotal() > 0;
+}
+
+function clearLockedCubes(){
+  // remove all locked cubes from board + clear occupancy
+  for(const grp of locked){
+    if(grp && grp.parent){
+      grp.parent.remove(grp);
+    }
+  }
+  locked.length = 0;
+  occupied.clear();
+}
+
+
+function showClearAndReturnToReady(){
+  gameState = "CLEARING";
+  // CLEAR 텍스트 + 별 표시
+  const curStars = computeStars(CURRENT_STAGE_ID, runRolls);
+  clearText.textContent = `CLEAR  ${"★".repeat(curStars)}${"☆".repeat(3-curStars)}`;
+  clearText.style.display = "block";
+  startBtn.style.display = "none";
+  confirmBtn.style.display = "none";
+
+  // record run result (best/last split)
+  const elapsedMs = (runStartMs!=null) ? Math.max(0, Math.round(nowMs() - runStartMs)) : null;
+  const prev = getStageProgressById(CURRENT_STAGE_ID) || { cleared:false, stars:0, bestTimeMs:null, lastTimeMs:null, bestRolls:null, lastRolls:null };
+  const firstClear = !prev.cleared;
+
+  const runStars = computeStars(CURRENT_STAGE_ID, runRolls);
+  const next = {
+    cleared: true,
+    lastTimeMs: elapsedMs,
+    lastRolls: runRolls,
+    lastStars: runStars,
+  };
+
+  if(elapsedMs!=null){
+    if(prev.bestTimeMs==null || elapsedMs < prev.bestTimeMs){
+      next.bestTimeMs = elapsedMs;
+    }
+  }
+  if(runRolls!=null){
+    if(prev.bestRolls==null || runRolls < prev.bestRolls){
+      next.bestRolls = runRolls;
+    }
+  }
+
+  // 별 판정: 이번 클리어 기준으로 계산하고, 저장은 최고 별을 유지
+  next.stars = Math.max(prev.stars ?? 0, next.lastStars ?? 0);
+
+  upsertStageProgressById(CURRENT_STAGE_ID, next);
+  updateStorageHint("clear saved");
+  renderStageButtons();
+  updateUI();
+
+  setTimeout(()=>{
+    // 클리어 연출이 사라질 때, 맞춰 둔 블록도 함께 제거
+    clearText.style.display = "none";
+    clearText.textContent = "CLEAR";
+    clearLockedCubes();
+
+    if(firstClear && CURRENT_STAGE_ID < 10){
+      // first clear: auto advance
+      setStage(CURRENT_STAGE_ID + 1);
+      // setStage() already enters READY
+      return;
+    }
+    // replay clear: stay
+    enterReady();
+  }, 3000);
+}
+
+
+function lockCube(){
+  // "결정" 버튼 액션
+  if(gameState !== "PLAYING") return;
+  if(!activeGroup || !isOnMatchingGoal()) return;
+
+  const g = goals.get(key(activePos.x,activePos.y));
+  recolorAllTo(g.color);
+
+  occupied.add(key(activePos.x,activePos.y));
+  locked.push(activeGroup);
+
+  activeGroup=null;
+  activeOri=null;
+
+  confirmBtn.style.display = "none";
+
+  if(checkClear()){
+    showClearAndReturnToReady();
+    return;
+  }
+
+  // Next cube
+  spawnCubeAtStart({drop:true});
+
+  // Stage 1 tutorial: show immediately after spawn (only first-ever Stage 1 run)
+  if(isStage1TutorialEligible()) showStage1Tutorial();
+}
+
+function resetAll(){
+  // NOTE: Reset for stage switch / retry. (Do not touch movement/color core logic)
+  if(activeGroup && activeGroup.parent) activeGroup.parent.remove(activeGroup);
+
+  // Locked cubes may still be under boardRoot (activeGroup was never re-parented on lock)
+  for(const m of locked){
+    if(m && m.parent) m.parent.remove(m);
+  }
+  locked.length = 0;
+
+  occupied.clear();
+  moving = false;
+
+  buildBoard();
+  fitPER();
+  enterReady();
+}
+
+function updateHUD(){
+  // START button: only in READY
+  startBtn.style.display = (gameState==="READY") ? "inline-flex" : "none";
+
+  // CONFIRM button: only when on matching goal and not moving
+  const canConfirm = (gameState==="PLAYING" && !!activeGroup && isOnMatchingGoal() && !moving);
+  confirmBtn.style.display = canConfirm ? "inline-flex" : "none";
+}
+
+function updateUI(){
+  // Right panel status only
+  const g = (activeGroup && activeOri) ? goals.get(key(activePos.x,activePos.y)) : null;
+
+  // keep legacy button hidden/disabled (we use bottom HUD buttons)
+  lockBtn.disabled = true;
+
+    statusEl.innerHTML = renderMatchAnalysisHTML(lastSpawnAnalysis);
+
+  updateHUD();
+}
+
+
+function enterReady(){
+  gameState = "READY";
+  moving = false;
+
+  // Stage 1 tutorial: ensure hidden while not playing
+  if(typeof hideStage1Tutorial === "function") hideStage1Tutorial(false);
+
+  // remove active cube if any
+  if(activeGroup){
+    boardRoot.remove(activeGroup);
+  }
+  activeGroup = null;
+  activeOri = null;
+  activePos = {x:START_X, y:START_Y};
+
+  updateHUD();
+  updateUI();
+}
+
+/* =========================
+   CAMERA FIT
+========================= */
+const _tmp = new THREE.Vector3();
+const _corners = Array.from({length:8}, ()=>new THREE.Vector3());
+function computeBounds(){
+  const min = new THREE.Vector3(-0.5, 0.0, -0.5);
+  const max = new THREE.Vector3(BOARD_W-0.5, (CUBE_SIZE + HOVER_Y) + 1.0, BOARD_H-0.5);
+  return {min,max};
+}
+function getCorners(min,max){
+  let i=0;
+  for(const x of [min.x, max.x])
+    for(const y of [min.y, max.y])
+      for(const z of [min.z, max.z])
+        _corners[i++].set(x,y,z);
+  return _corners;
+}
+function setPose(cam, yawDeg, pitchDeg){
+  const yaw = THREE.MathUtils.degToRad(yawDeg);
+  const pitch = THREE.MathUtils.degToRad(pitchDeg);
+
+  const vc = getViewCenter();
+  const R = 22;
+  const horiz = R * Math.cos(pitch);
+  const y = R * Math.sin(pitch);
+  const x = vc.x + horiz * Math.sin(yaw);
+  const z = vc.z + horiz * Math.cos(yaw);
+
+  cam.position.set(x,y,z);
+  cam.lookAt(vc);
+}
+function fitPER(){
+  const {min,max} = computeBounds();
+  setPose(camPER, YAW_DEG, pitchDeg);
+  camPER.updateMatrixWorld(true);
+
+  const inv = camPER.matrixWorldInverse;
+  let maxAbsX=0, maxAbsY=0;
+  for(const p of getCorners(min,max)){
+    _tmp.copy(p).applyMatrix4(inv);
+    maxAbsX = Math.max(maxAbsX, Math.abs(_tmp.x));
+    maxAbsY = Math.max(maxAbsY, Math.abs(_tmp.y));
+  }
+  const fov = THREE.MathUtils.degToRad(camPER.fov);
+  const aspect = camPER.aspect;
+  const distY = maxAbsY / Math.tan(fov/2);
+  const distX = maxAbsX / (Math.tan(fov/2) * aspect);
+  const dist = Math.max(distX, distY) + 2.4;
+
+  const dir = new THREE.Vector3();
+  camPER.getWorldDirection(dir);
+  camPER.position.copy(getViewCenter()).addScaledVector(dir, -dist);
+  camPER.lookAt(getViewCenter());
+  camPER.updateProjectionMatrix();
+}
+
+/* =========================
+   INPUT (월드 기준)
+========================= */
+const raycaster=new THREE.Raycaster();
+const ndc=new THREE.Vector2();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
+const tmpV3=new THREE.Vector3();
+
+function pointerNDC(ev){
+  const r = canvas.getBoundingClientRect();
+  ndc.x = ((ev.clientX - r.left)/r.width)*2 - 1;
+  ndc.y = -(((ev.clientY - r.top)/r.height)*2 - 1);
+}
+function groundPoint(ev){
+  pointerNDC(ev);
+  raycaster.setFromCamera(ndc, activeCam);
+  raycaster.ray.intersectPlane(groundPlane, tmpV3);
+  // 보드가 boardRoot 아래로 오프셋되어 있으므로, 입력 좌표도 boardRoot 로컬로 변환
+  return tmpV3.clone().sub(boardRoot.position);
+}
+function hitCube(ev){
+  if(!activeGroup) return false;
+  const visual = activeGroup.children[0]; // GLB root
+  pointerNDC(ev);
+  raycaster.setFromCamera(ndc, activeCam);
+  const hits = raycaster.intersectObject(visual, true);
+  return hits.length>0;
+}
+function nearCube(p){
+  if(!activeGroup) return false;
+  const dx=p.x-activeGroup.position.x;
+  const dz=p.z-activeGroup.position.z;
+  return Math.hypot(dx,dz)<=1.2;
+}
+
+let down=false;
+let startP=null;
+const DRAG_TH=0.22;
+
+canvas.addEventListener("pointerdown",(e)=>{
+  down=true;
+  canvas.setPointerCapture(e.pointerId);
+  startP = groundPoint(e);
+});
+
+canvas.addEventListener("pointerup",(e)=>{
+  if(!down) return;
+  down=false;
+
+  const endP = groundPoint(e);
+  const v = endP.clone().sub(startP);
+
+  const ax=Math.abs(v.x), az=Math.abs(v.z);
+  if(Math.max(ax,az)<DRAG_TH){  return; }
+
+  if(ax>az) tryRoll(v.x>0 ? "right":"left");
+  else     tryRoll(v.z>0 ? "down":"up");
+
+});
+
+
+/* =========================
+   UI EVENTS
+========================= */
+// legacy button: hide (we use HUD buttons)
+lockBtn.style.display = "none";
+lockBtn.onclick = ()=>{};
+
+
+startBtn.onclick = ()=>{
+  if(gameState !== "READY") return;
+
+  // start run metrics
+  runStartMs = nowMs();
+  runRolls = 0;
+
+  startBtn.style.display = "none";
+  spawnCubeAtStart({drop:true});
+
+  updateStorageHint("run started");
+};
+
+confirmBtn.onclick = ()=>lockCube();
+
+// Local storage controls
+if (typeof saveNowBtn !== "undefined" && saveNowBtn) {
+  saveNowBtn.onclick = ()=>{
+    // Optional: keep for debugging (no gameplay effect)
+    upsertStageProgressById(CURRENT_STAGE_ID, { debugSavedAt: Date.now() });
+    updateStorageHint("manual save");
+  };
+}
+if (typeof resetStageBtn !== "undefined" && resetStageBtn) {
+  resetStageBtn.onclick = ()=>{
+    resetStageProgressById(CURRENT_STAGE_ID);
+    updateStorageHint("stage reset");
+    resetAll();
+    enterReady();
+    renderStageButtons();
+  };
+}
+let resetAllArmed = false;
+let resetAllArmTimer = null;
+
+function disarmResetAll(){
+  resetAllArmed = false;
+  resetAllBtn.textContent = "전체 기록 삭제";
+  if(resetAllArmTimer) { clearTimeout(resetAllArmTimer); resetAllArmTimer=null; }
+}
+
+resetAllBtn.onclick = ()=>{
+  if(!resetAllArmed){
+    resetAllArmed = true;
+    resetAllBtn.textContent = "정말 삭제?";
+    resetAllArmTimer = setTimeout(disarmResetAll, 3000);
+    return;
+  }
+  // confirmed
+  resetAllProgress();
+  disarmResetAll();
+  // default to stage 1 after wipe
+  setStage(1);
+};
+
+// Space: Start / Confirm
+function handleSpaceAction(e){
+  if(e.code !== "Space") return;
+  e.preventDefault();
+
+  if(gameState === "READY"){
+    startBtn.click();
+    return;
+  }
+  const canConfirm = (gameState==="PLAYING" && !!activeGroup && isOnMatchingGoal() && !moving);
+  if(canConfirm){
+    confirmBtn.click();
+  }
+}
+window.addEventListener("keydown", handleSpaceAction, {passive:false});
+
+// Roll input wrapper: increments roll counter (does NOT touch movement core)
+function tryRoll(dir){
+  if(gameState!=="PLAYING" || !activeGroup || moving) return;
+  // Stage 1 tutorial: hide as soon as the player moves once
+  if(tutorialVisible) hideStage1Tutorial(true);
+  runRolls++;
+  animateRoll(dir);
+}
+
+function handleRollKeys(e){
+  const t = e.target;
+  if(t && (t.tagName==="INPUT" || t.tagName==="TEXTAREA" || t.isContentEditable)) return;
+
+  const key = (e.key || "").toLowerCase();
+  const code = e.code || "";
+
+  let dir = null;
+  if(key==="d" || code==="Numpad6") dir = "right";
+  else if(key==="a" || code==="Numpad4") dir = "left";
+  else if(key==="w" || code==="Numpad8") dir = "up";      // 앞쪽 굴림
+  else if(key==="s" || code==="Numpad5") dir = "down";    // 뒤쪽 굴림
+  if(!dir) return;
+
+  e.preventDefault();
+  tryRoll(dir);
+}
+window.addEventListener("keydown", handleRollKeys, {passive:false});
+
+
+
+/* =========================
+   MIN ROLL SOLVER (Exact)
+   - Dijkstra over state: (x,y,oriIndex,lockedMask)
+   - roll cost = 1 per move, lock cost = 0
+   - locked targets become blocked (cannot step)
+========================= */
+
+const solveStageBtn = document.getElementById('solveStageBtn');
+const refineBtn = document.getElementById('refineBtn');
+const solverHintEl  = document.getElementById('solverHint');
+
+let lastSolveCtx = null; // {stageId, seeds, done, total}
+
+const wAStarEl = document.getElementById('wAStar');
+const wRemEl   = document.getElementById('wRem');
+const wDistEl  = document.getElementById('wDist');
+const wRotEl   = document.getElementById('wRot');
+const kNearEl  = document.getElementById('kNear');
+const wKEl     = document.getElementById('wK');
+const doneBonusEl = document.getElementById('doneBonus');
+const maxExpEl = document.getElementById('maxExp');
+const maxOpenEl= document.getElementById('maxOpen');
+const pruneUnreachableEl = document.getElementById('pruneUnreachable');
+
+const wAStarValEl = document.getElementById('wAStarVal');
+const wRemValEl   = document.getElementById('wRemVal');
+const wDistValEl  = document.getElementById('wDistVal');
+const wRotValEl   = document.getElementById('wRotVal');
+const kValEl      = document.getElementById('kVal');
+const wKValEl     = document.getElementById('wKVal');
+const doneBonusValEl = document.getElementById('doneBonusVal');
+const maxExpValEl = document.getElementById('maxExpVal');
+const maxOpenValEl= document.getElementById('maxOpenVal');
+
+function bindSlider(slider, label, fmt=(v)=>v){
+  const sync=()=>{ label.textContent = fmt(slider.value); };
+  slider.addEventListener('input', sync);
+  sync();
+}
+bindSlider(wAStarEl, wAStarValEl, v=>Number(v).toFixed(1));
+bindSlider(wRemEl,   wRemValEl,   v=>String(parseInt(v,10)));
+bindSlider(wDistEl,  wDistValEl,  v=>Number(v).toFixed(1));
+bindSlider(wRotEl,   wRotValEl,   v=>Number(v).toFixed(1));
+bindSlider(kNearEl,  kValEl,      v=>String(parseInt(v,10)));
+bindSlider(wKEl,     wKValEl,     v=>Number(v).toFixed(1));
+bindSlider(doneBonusEl, doneBonusValEl, v=>Number(v).toFixed(2));
+bindSlider(maxExpEl, maxExpValEl, v=>String(parseInt(v,10)));
+bindSlider(maxOpenEl,maxOpenValEl,v=>String(parseInt(v,10)));
+
+function readSolverTuning(){
+  return {
+    weight: Number(wAStarEl.value),
+    wRem: Number(wRemEl.value),
+    wDist: Number(wDistEl.value),
+    wRot: Number(wRotEl.value),
+    kNear: parseInt(kNearEl.value, 10),
+    wK: Number(wKEl.value),
+    doneBonus: Number(doneBonusEl.value),
+    maxExpansions: parseInt(maxExpEl.value, 10),
+    maxOpen: parseInt(maxOpenEl.value, 10),
+    pruneUnreachable: !!pruneUnreachableEl.checked,
+  };
+}
+
+
+function makeStartOriStrForBlockType(bt){
+  if(bt==='MONO_Y_1') return encodeOri(makeMonoYellowOrientation());
+  if(bt==='ADJ_2_YR') return encodeOri(makeTwoColorAdjOrientation());
+  if(bt==='BALANCED_3_PAIRED') return encodeOri(makeBalancedOrientation());
+  return encodeOri(makeSixColorOrientation());
+}
+
+function precomputeOrientations(bt){
+  const start = makeStartOriStrForBlockType(bt);
+  const dirs = ['up','down','left','right'];
+  const q=[start];
+  const seen=new Set([start]);
+  while(q.length){
+    const o=q.shift();
+    for(const d of dirs){
+      const no=rollOriEncoded(o,d);
+      if(!seen.has(no)){
+        seen.add(no);
+        q.push(no);
+      }
+    }
+  }
+  const list=[...seen];
+  const idx=new Map(list.map((s,i)=>[s,i]));
+  const trans=list.map(o=>{
+    const t={};
+    for(const d of dirs) t[d]=idx.get(rollOriEncoded(o,d));
+    return t;
+  });
+  const top=list.map(o=>o[0]);
+  return { list, idx, trans, top };
+}
+
+class MinHeap{
+  constructor(){this.a=[];}
+  push(n){
+    const a=this.a; a.push(n);
+    let i=a.length-1;
+    while(i>0){
+      const p=(i-1)>>1;
+      if(a[p][0] <= n[0]) break;
+      a[i]=a[p]; i=p;
+    }
+    a[i]=n;
+  }
+  pop(){
+    const a=this.a;
+    if(!a.length) return null;
+    const root=a[0];
+    const last=a.pop();
+    if(a.length){
+      let i=0;
+      while(True){
+        const l=i*2+1, r=l+1;
+        if(l>=a.length) break;
+        let c=l;
+        if(r<a.length && a[r][0]<a[l][0]) c=r;
+        if(a[c][0] >= last[0]) break;
+        a[i]=a[c]; i=c;
+      }
+      a[i]=last;
+    }
+    return root;
+  }
+  get size(){return this.a.length;}
+}
+
+function True(){return true;}
+
+function stageTargetIndex(stage){
+  const idxMap=new Map();
+  const targets=[]; // {x,y,color}
+  for(let y=0;y<stage.boardH;y++){
+    for(let x=0;x<stage.boardW;x++){
+      const c = stage.targetGrid?.[y]?.[x] ?? 'W';
+      if(c && c!=='W'){
+        const k = x+'_'+y;
+        idxMap.set(k, targets.length);
+        targets.push({x,y,color:c});
+      }
+    }
+  }
+  return { idxMap, targets };
+}
+
+function maskHas(mask, bit){
+  return (mask & (1n<<BigInt(bit))) !== 0n;
+}
+function maskAdd(mask, bit){
+  return mask | (1n<<BigInt(bit));
+}
+
+function posKey(x,y,w){ return y*w + x; }
+
+
+async function computeMinRollsForStageId(stageId, opts={}){
+  // 근사(Approx) 근사 최소 굴림수: 상태공간 폭발을 막기 위해 탐색 한도를 둔 Weighted A* 입니다.
+  // 비용: roll=1, lock/confirm=0
+  const stage = STAGES.find(s=>s.id===stageId);
+  if(!stage) return null;
+
+  const onProgress = opts.onProgress || null;
+
+  const LIMIT_EXPANSIONS = opts.maxExpansions ?? 180000;
+  const LIMIT_OPEN = opts.maxOpen ?? 60000;
+  const WEIGHT = opts.weight ?? 1.6;
+  const W_REM = opts.wRem ?? 12;
+  const W_DIST = opts.wDist ?? 2.0;
+  const W_ROT = opts.wRot ?? 1.0;
+  const K_NEAR = opts.kNear ?? 3;
+  const W_K = opts.wK ?? 0.7;
+  const DONE_BONUS = opts.doneBonus ?? 0.05;
+  const PRUNE_UNREACHABLE = !!(opts.pruneUnreachable);
+  const MIN_DONE = opts.minDone ?? 0;
+
+  const {idxMap, targets} = stageTargetIndex(stage);
+  const n = targets.length;
+  const allMask = n===0 ? 0n : ((1n<<BigInt(n)) - 1n);
+
+  const oriData = precomputeOrientations(stage.blockType);
+  const oriStartStr = makeStartOriStrForBlockType(stage.blockType);
+  const oriStartIdx = oriData.idx.get(oriStartStr);
+
+  // Precompute min roll steps to reach each top color from any orientation (cheap: <=24 states)
+  const COLORS = ['R','O','Y','G','B','P','W'];
+  const colorToIdx = new Map(COLORS.map((c,i)=>[c,i]));
+  const minTopSteps = Array.from({length: oriData.list.length}, ()=>Array(COLORS.length).fill(99));
+  (function(){
+    const dirs2 = ['up','down','left','right'];
+    for(let s=0;s<oriData.list.length;s++){
+      // BFS on orientation graph
+      const q=[s];
+      const dArr=Array(oriData.list.length).fill(999);
+      dArr[s]=0;
+      let qi=0;
+      while(qi<q.length){
+        const cur=q[qi++];
+        const dc=dArr[cur];
+        const topC = oriData.top[cur];
+        const ti = colorToIdx.get(topC);
+        if(ti!==undefined && dc < minTopSteps[s][ti]) minTopSteps[s][ti]=dc;
+        for(const dd of dirs2){
+          const nxt = oriData.trans[cur][dd];
+          if(dArr[nxt] > dc+1){
+            dArr[nxt]=dc+1;
+            q.push(nxt);
+          }
+        }
+      }
+    }
+  })();
+
+
+  const w=stage.boardW, h=stage.boardH;
+  const dirs = ['up','down','left','right'];
+  const dx = {left:-1,right:1,up:0,down:0};
+  const dy = {up:-1,down:1,left:0,right:0};
+
+  const sx = stage.startX, sy = stage.startY;
+
+  function stateId(p, oi, mask){
+    return p+'|'+oi+'|'+mask.toString(36);
+  }
+
+  function popcount(mask){
+    let c=0;
+    for(let i=0;i<n;i++) if(maskHas(mask,i)) c++;
+    return c;
+  }
+
+  function heuristic(p, mask, oi){
+    if(mask === allMask) return 0;
+    const x = p % w;
+    const y = (p / w) | 0;
+
+    // Remaining goals count + closest (dist + rot) + sum of K closest (dist+rot)
+    let remaining = 0;
+    let best = 9999;
+
+    const costs = [];
+    for(let i=0;i<n;i++){
+      if(!maskHas(mask, i)){
+        remaining++;
+        const t = targets[i];
+        const d = Math.abs(t.x - x) + Math.abs(t.y - y);
+        const ci = colorToIdx.get(t.color);
+        const rot = (ci===undefined) ? 0 : minTopSteps[oi][ci];
+        const cost = d + W_ROT * rot;
+        costs.push(cost);
+        if(cost < best) best = cost;
+      }
+    }
+    if(best===9999) best = 0;
+
+    costs.sort((a,b)=>a-b);
+    const k = Math.min(K_NEAR, costs.length);
+    let sumK = 0;
+    for(let i=0;i<k;i++) sumK += costs[i];
+
+    return W_REM * remaining + W_DIST * best + W_K * sumK;
+  }
+
+  const dist = new Map(); // best g
+  const heap = new MinHeap(); // [f, g, p, oi, mask]
+
+  const p0 = posKey(sx,sy,w);
+
+  // Spawn candidates mimic pickBestSpawnX() for CHAOS_6_FIXED stages (solver-local, based on remaining goals).
+  const spawnCand = (stage.blockType === "CHAOS_6_FIXED")
+    ? (() => {
+        const arr = [];
+        for(let x=stage.startX-1; x<=stage.startX+2; x++){
+          if(x>=0 && x<w) arr.push(x);
+        }
+        return arr;
+      })()
+    : null;
+
+  function pickSpawnPosForMask(mask){
+    // For non-CHAOS stages, always respawn at fixed start tile.
+    if(stage.blockType !== "CHAOS_6_FIXED" || !spawnCand || spawnCand.length===0){
+      return { p: p0, oi: oriStartIdx };
+    }
+
+    // Remaining counts per 6-color
+    const remCount = {R:0,O:0,Y:0,G:0,B:0,P:0};
+    for(let i=0;i<n;i++){
+      if(!maskHas(mask,i)){
+        const c = targets[i].color;
+        if(remCount[c] !== undefined) remCount[c] += 1;
+      }
+    }
+
+    // If no remaining 6-color targets, default start.
+    const hasAny = remCount.R+remCount.O+remCount.Y+remCount.G+remCount.B+remCount.P;
+    if(hasAny<=0){
+      return { p: p0, oi: oriStartIdx };
+    }
+
+    const oriN = oriData.list.length;
+    const WN = w*h;
+
+    function evalSpawnX(sx2){
+      // BFS over (pos, oriIdx) with locked targets treated as walls.
+      const startP = posKey(sx2, sy, w);
+      const visited = new Uint8Array(WN * oriN);
+      const qP = new Int32Array(WN * oriN);
+      const qO = new Int16Array(WN * oriN);
+      let qh=0, qt=0;
+
+      // If start position is a locked target, invalid.
+      const stIdx = idxMap.get(sx2+'_'+sy);
+      if(stIdx !== undefined && maskHas(mask, stIdx)){
+        return { valid:false, score:-1e9, minPerc:0, sx:sx2 };
+      }
+
+      const startKey = startP*oriN + oriStartIdx;
+      visited[startKey]=1;
+      qP[qt]=startP; qO[qt]=oriStartIdx; qt++;
+
+      const reached = new Uint8Array(n); // per target idx
+      while(qh<qt){
+        const pp = qP[qh];
+        const oo = qO[qh];
+        qh++;
+
+        const cx = pp % w;
+        const cy = (pp / w) | 0;
+
+        const gi = idxMap.get(cx+'_'+cy);
+        if(gi !== undefined && !maskHas(mask, gi)){
+          if(targets[gi].color === oriData.top[oo]) reached[gi]=1;
+        }
+
+        for(const d of dirs){
+          const nx2 = cx + dx[d];
+          const ny2 = cy + dy[d];
+          if(nx2<0||nx2>=w||ny2<0||ny2>=h) continue;
+
+          const tLocked = idxMap.get(nx2+'_'+ny2);
+          if(tLocked !== undefined && maskHas(mask, tLocked)) continue;
+
+          const np2 = posKey(nx2, ny2, w);
+          const no2 = oriData.trans[oo][d];
+          const vk = np2*oriN + no2;
+          if(visited[vk]) continue;
+          visited[vk]=1;
+          qP[qt]=np2; qO[qt]=no2; qt++;
+        }
+      }
+
+      const good = {R:0,O:0,Y:0,G:0,B:0,P:0};
+      for(let i=0;i<n;i++){
+        if(reached[i]){
+          const c = targets[i].color;
+          if(good[c] !== undefined) good[c] += 1;
+        }
+      }
+
+      let score = 0;
+      let minPerc = 100;
+      let denom = 0;
+
+      for(const c of ["R","O","Y","G","B","P"]){
+        const total = remCount[c];
+        if(total<=0) continue;
+        const perc = Math.round((good[c] / total) * 100);
+        score += total * perc;
+        minPerc = Math.min(minPerc, perc);
+        denom++;
+      }
+      if(denom===0) minPerc = 0;
+
+      return { valid:true, score, minPerc, sx:sx2 };
+    }
+
+    let best = null;
+    for(const sx2 of spawnCand){
+      const r = evalSpawnX(sx2);
+      if(!best) best = r;
+      else {
+        if(r.score > best.score) best = r;
+        else if(r.score === best.score && r.minPerc > best.minPerc) best = r;
+        else if(r.score === best.score && r.minPerc === best.minPerc){
+          if(Math.abs(r.sx - stage.startX) < Math.abs(best.sx - stage.startX)) best = r;
+        }
+      }
+    }
+
+    const finalSx = (best && best.valid) ? best.sx : stage.startX;
+    return { p: posKey(finalSx, sy, w), oi: oriStartIdx };
+  }
+  const m0 = 0n;
+
+  // Initial states:
+  // - normal run: start from spawn position (mimic game pickBestSpawnX for CHAOS stages)
+  // - refine run: start from captured seed states
+  const seedStates = (opts.seeds && Array.isArray(opts.seeds) && opts.seeds.length) ? opts.seeds : null;
+
+  if(seedStates){
+    for(const s of seedStates){
+      if(!s) continue;
+      const p = s.p|0;
+      const oi = s.oi|0;
+      const mask = (typeof s.mask === "bigint") ? s.mask : BigInt(s.mask);
+      const g = s.g|0;
+      const done = (s.done ?? popcount(mask))|0;
+      if(done < MIN_DONE) continue;
+      const f = g + WEIGHT * heuristic(p, mask, oi) - DONE_BONUS * done;
+      heap.push([f, g, p, oi, mask]);
+      const sid = stateId(p, oi, mask);
+      const prev = dist.get(sid);
+      if(prev===undefined || g < prev) dist.set(sid, g);
+    }
+  } else {
+    const init = pickSpawnPosForMask(0n);
+    const pInit = init.p;
+    const oiInit = init.oi;
+
+    const g0 = 0;
+    const f0 = g0 + WEIGHT * heuristic(pInit, m0, oiInit) - DONE_BONUS * 0;
+    heap.push([f0, g0, pInit, oiInit, m0]);
+    dist.set(stateId(pInit, oiInit, m0), g0);
+  }
+
+  let expansions = 0;
+  let bestComplete = Infinity;
+  let bestProgress = { g: Infinity, done: 0 };
+
+  // Seed capture for 2-stage refine
+  const seeds = [];
+  const MAX_SEEDS = opts.maxSeeds ?? 120;
+  function offerSeed(p, oi, mask, g, done){
+    // Keep high-done, low-g states
+    seeds.push({p, oi, mask, g, done});
+    if(seeds.length > MAX_SEEDS*2){
+      seeds.sort((a,b)=> (b.done - a.done) || (a.g - b.g));
+      seeds.length = MAX_SEEDS;
+    }
+  }
+
+  let lastYield = performance.now();
+
+  while(heap.size && expansions < LIMIT_EXPANSIONS){
+    const item = heap.pop();
+    if(!item) break;
+    const [f, g, p, oi, mask] = item;
+
+    if(g >= bestComplete) continue;
+
+    const sid = stateId(p,oi,mask);
+    const bestG = dist.get(sid);
+    if(bestG!==g) continue;
+
+    expansions++;
+
+    if(mask === allMask){
+      bestComplete = Math.min(bestComplete, g);
+      continue;
+    }
+
+    const doneCnt = popcount(mask);
+    if(doneCnt > bestProgress.done || (doneCnt===bestProgress.done && g < bestProgress.g)){
+      bestProgress = { g, done: doneCnt };
+    }
+    if(doneCnt >= MIN_DONE){
+      offerSeed(p, oi, mask, g, doneCnt);
+    }
+
+    if(onProgress){
+      const now = performance.now();
+      if(now - lastYield > 120){
+        onProgress({stageId, expansions, open: heap.size, seen: dist.size, bestComplete: (bestComplete<Infinity?bestComplete:null), done: doneCnt, total: n});
+        await new Promise(r=>setTimeout(r,0));
+        lastYield = now;
+      }
+    }
+
+    const x = p % w;
+    const y = (p / w) | 0;
+
+    if(PRUNE_UNREACHABLE && (expansions % 200 === 0)){
+      // Quick reachability prune: if any remaining target is unreachable considering locked targets as walls
+      const q=[p];
+      const seenPos=new Uint8Array(w*h);
+      seenPos[p]=1;
+      let qi=0;
+      while(qi<q.length){
+        const pp=q[qi++];
+        const px=pp%w, py=(pp/w)|0;
+        for(const dd of dirs){
+          const nx2=px+dx[dd], ny2=py+dy[dd];
+          if(nx2<0||nx2>=w||ny2<0||ny2>=h) continue;
+          const np2=posKey(nx2,ny2,w);
+          if(seenPos[np2]) continue;
+          const tLocked = idxMap.get(nx2+'_'+ny2);
+          if(tLocked!==undefined && maskHas(mask, tLocked)) continue;
+          seenPos[np2]=1;
+          q.push(np2);
+        }
+      }
+      let impossible=false;
+      for(let i=0;i<n;i++){
+        if(!maskHas(mask,i)){
+          const tt=targets[i];
+          const pp2=posKey(tt.x, tt.y, w);
+          if(!seenPos[pp2]){ impossible=true; break; }
+        }
+      }
+      if(impossible) continue;
+    }
+
+    // 0-cost lock action (선택)
+    // IMPORTANT: In gameplay, after confirming a matching goal, the active cube is locked
+    // and the NEXT cube respawns at the start tile with a fresh start orientation.
+    const tIdx = idxMap.get(x+'_'+y);
+    if(tIdx !== undefined && !maskHas(mask, tIdx)){
+      const needColor = targets[tIdx].color;
+      const topColor = oriData.top[oi];
+      if(needColor === topColor){
+        const nmask = maskAdd(mask, tIdx);
+
+        // Respawn (position + orientation reset) — mimic game pickBestSpawnX() for CHAOS_6_FIXED
+        const spawn = pickSpawnPosForMask(nmask);
+        const rp = spawn.p;
+        const roi = spawn.oi;
+
+        const nsid = stateId(rp, roi, nmask);
+        if(!dist.has(nsid) || dist.get(nsid) > g){
+          dist.set(nsid, g);
+          const done2 = popcount(nmask);
+          const nf = g + WEIGHT * heuristic(rp, nmask, roi) - DONE_BONUS * done2;
+          heap.push([nf, g, rp, roi, nmask]);
+        }
+      }
+    }
+
+    // Moves
+    for(const d of dirs){
+      const nx = x + dx[d];
+      const ny = y + dy[d];
+      if(nx<0||nx>=w||ny<0||ny>=h) continue;
+
+      // locked target cannot be stepped on
+      const ntIdx = idxMap.get(nx+'_'+ny);
+      if(ntIdx !== undefined && maskHas(mask, ntIdx)) continue;
+
+      const np = posKey(nx,ny,w);
+      const noi = oriData.trans[oi][d];
+      const ng = g + 1;
+      if(ng >= bestComplete) continue;
+
+      const nsid = stateId(np, noi, mask);
+      const prev = dist.get(nsid);
+      if(prev===undefined || ng < prev){
+        dist.set(nsid, ng);
+        const done2 = popcount(mask);
+        const nf = ng + WEIGHT * heuristic(np, mask, noi) - DONE_BONUS * done2;
+        heap.push([nf, ng, np, noi, mask]);
+      }
+    }
+
+    // Open list cap (approx prune)
+    if(heap.size > LIMIT_OPEN){
+      heap.a.sort((a,b)=>a[0]-b[0]);
+      heap.a = heap.a.slice(0, LIMIT_OPEN);
+      // rebuild heap
+      for(let i=(heap.a.length>>1)-1;i>=0;i--){
+        let j=i;
+        const val=heap.a[j];
+        while(true){
+          const l=j*2+1, r=l+1;
+          if(l>=heap.a.length) break;
+          let c=l;
+          if(r<heap.a.length && heap.a[r][0]<heap.a[l][0]) c=r;
+          if(heap.a[c][0] >= val[0]) break;
+          heap.a[j]=heap.a[c]; j=c;
+        }
+        heap.a[j]=val;
+      }
+    }
+  }
+
+  if(bestComplete < Infinity){
+    seeds.sort((a,b)=> (b.done - a.done) || (a.g - b.g));
+    if(seeds.length > MAX_SEEDS) seeds.length = MAX_SEEDS;
+    return { rolls: bestComplete, complete: true, done: n, total: n, expansions, seeds };
+  }
+  seeds.sort((a,b)=> (b.done - a.done) || (a.g - b.g));
+  if(seeds.length > MAX_SEEDS) seeds.length = MAX_SEEDS;
+  return { rolls: bestProgress.g, complete: false, done: bestProgress.done, total: n, expansions, seeds };
+}
+
+
+async function solveCurrentStage(){
+  const id = CURRENT_STAGE_ID;
+  solverHintEl.textContent = `스테이지 ${id} 탐색중... (브라우저가 느려질 수 있어요)`;
+  const t0 = performance.now();
+  const tuning = readSolverTuning();
+  const res = await computeMinRollsForStageId(id, {
+    ...tuning,
+    onProgress: (p)=>{
+      const bc = (p.bestComplete==null) ? '-' : p.bestComplete;
+      solverHintEl.textContent = `스테이지 ${p.stageId} 탐색중... 확장=${p.expansions.toLocaleString()}  오픈=${p.open.toLocaleString()}  방문=${p.seen.toLocaleString()}  진행=${p.done}/${p.total}  best≈${bc}`;
+    }
+  });
+  const dt = ((performance.now()-t0)/1000).toFixed(2);
+  if(res===null){
+    solverHintEl.textContent = `스테이지 ${id} 최소 굴림수: (탐색 실패)  | 시간 ${dt}s`;
+    lastSolveCtx = null;
+    if(refineBtn) refineBtn.disabled = true;
+  } else {
+    const done = (res.done ?? (res.complete ? res.total : 0)) | 0;
+    const total = (res.total ?? 0) | 0;
+    lastSolveCtx = { stageId: id, seeds: res.seeds || [], done, total };
+
+    if(res.complete){
+      solverHintEl.textContent = `스테이지 ${id} 근사 최소 굴림수: ${res.rolls} (완료)  | 시간 ${dt}s  | 확장 ${res.expansions.toLocaleString()}`;
+      if(refineBtn) refineBtn.disabled = true;
+    } else {
+      solverHintEl.textContent = `스테이지 ${id} 근사 최소 굴림수: ${res.rolls} (미완료: ${done}/${total})  | 시간 ${dt}s  | 확장 ${res.expansions.toLocaleString()}`;
+      if(refineBtn) refineBtn.disabled = !(lastSolveCtx.seeds && lastSolveCtx.seeds.length);
+    }
+  }
+}
+
+
+
+function setSolverButtonsEnabled(v){
+  solveStageBtn.disabled = !v;
+  if(refineBtn){
+    // keep refine disabled unless we have seeds from last run
+    refineBtn.disabled = !v || !(lastSolveCtx && lastSolveCtx.seeds && lastSolveCtx.seeds.length) || (lastSolveCtx && lastSolveCtx.done===lastSolveCtx.total);
+  }
+}
+
+solveStageBtn.addEventListener('click', async ()=>{
+  if(solveStageBtn.disabled) return;
+  setSolverButtonsEnabled(false);
+  try{ await solveCurrentStage(); }
+  finally{ setSolverButtonsEnabled(true); }
+});
+
+if(refineBtn){
+  refineBtn.addEventListener('click', async ()=>{
+    if(refineBtn.disabled) return;
+    if(!lastSolveCtx || lastSolveCtx.stageId !== CURRENT_STAGE_ID || !lastSolveCtx.seeds || !lastSolveCtx.seeds.length){
+      solverHintEl.textContent = `재탐색: 먼저 현재 스테이지 계산을 한 번 실행해 주세요.`;
+      return;
+    }
+
+    setSolverButtonsEnabled(false);
+    try{
+      const id = CURRENT_STAGE_ID;
+      const t0 = performance.now();
+      const tuning = readSolverTuning();
+
+      // 2단계: 직전 탐색에서 수집한 seed 상태들로부터 이어서 파기
+      const minDone = Math.max(0, (lastSolveCtx.done|0) - 2);
+
+      solverHintEl.textContent = `스테이지 ${id} 2단계 재탐색중... (seed=${lastSolveCtx.seeds.length}, minDone=${minDone})`;
+
+      const res = await computeMinRollsForStageId(id, {
+        ...tuning,
+        seeds: lastSolveCtx.seeds,
+        minDone,
+        // refine는 씨앗 근처만 보므로 seed 수를 좀 더 확보
+        maxSeeds: Math.max(200, (tuning.maxSeeds||120)),
+        onProgress: (p)=>{
+          const bc = (p.bestComplete==null) ? '-' : p.bestComplete;
+          solverHintEl.textContent = `스테이지 ${p.stageId} 2단계 재탐색중... 확장=${p.expansions.toLocaleString()}  오픈=${p.open.toLocaleString()}  방문=${p.seen.toLocaleString()}  진행=${p.done}/${p.total}  best≈${bc}`;
+        }
+      });
+
+      const dt = ((performance.now()-t0)/1000).toFixed(2);
+
+      if(res && res.complete){
+        solverHintEl.textContent = `스테이지 ${id} 근사 최소 굴림수: ${res.rolls} (완료, 2단계)  | 시간 ${dt}s  | 확장 ${res.expansions.toLocaleString()}`;
+        lastSolveCtx = { stageId:id, seeds: res.seeds||[], done: res.total, total: res.total };
+        refineBtn.disabled = true;
+      } else if(res) {
+        lastSolveCtx = { stageId:id, seeds: res.seeds||[], done: res.done??lastSolveCtx.done, total: res.total??lastSolveCtx.total };
+        solverHintEl.textContent = `스테이지 ${id} 근사 최소 굴림수: ${res.rolls} (미완료, 2단계: ${lastSolveCtx.done}/${lastSolveCtx.total})  | 시간 ${dt}s  | 확장 ${res.expansions.toLocaleString()}`;
+        refineBtn.disabled = !(lastSolveCtx.seeds && lastSolveCtx.seeds.length);
+      } else {
+        solverHintEl.textContent = `스테이지 ${id} 2단계 재탐색: 실패  | 시간 ${dt}s`;
+      }
+    } finally {
+      setSolverButtonsEnabled(true);
+    }
+  });
+}
+// Enable by default; this is a per-stage approximate solver.
+setSolverButtonsEnabled(true);
+
+// Controls overlay toggle (top-left)
+(() => {
+  const toggleEl = document.getElementById('controlsToggle');
+  const contentEl = document.getElementById('controlsContent');
+  if (!toggleEl || !contentEl) return;
+
+  const setOpen = (open) => {
+    contentEl.style.display = open ? 'block' : 'none';
+    toggleEl.textContent = open ? '조작 ▲' : '조작 ▼';
+  };
+
+  // Default: open (same as previous behavior)
+  setOpen(true);
+
+  toggleEl.addEventListener('click', () => {
+    const isOpen = contentEl.style.display !== 'none';
+    setOpen(!isOpen);
+  });
+})();
+
+
+
+/* =========================
+   LOOP
+========================= */
+function tick(){
+  // tutorial arrow follows the active cube
+  if(typeof updateStage1TutorialAnchor === 'function') updateStage1TutorialAnchor();
+  renderer.render(scene, activeCam);
+  requestAnimationFrame(tick);
+}
+
+/* =========================
+   BOOT
+========================= */
+async function boot(){
+  try{
+    statusEl.textContent = "GLB 로딩중...";
+    await loadCubeOnce();
+
+    buildBoard();
+    resize();
+    tick();
+    statusEl.textContent = "준비 완료!\n하단 START로 시작하세요.";
+    enterReady();
+    updateUI();
+  } catch(err) {
+    console.error(err);
+    statusEl.textContent = "에러 발생:\n" + (err?.message || err);
+  }
+}
+boot();
+</script>
+</body>
+</html>
