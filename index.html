@@ -5,14 +5,18 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ChromaRoll</title>
   <style>
-    html,body{margin:0;height:100%;background:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif;}
+	    /* Prevent the whole page from scrolling; the right panel scrolls internally. */
+	    html,body{margin:0;height:100%;overflow:hidden;background:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif;}
     .app{height:100%;display:flex;background:#fff;}
     .game{flex:1;min-width:0;position:relative;background:#fff;width:min(calc(100vh * 0.5625), calc(100% - 252px));max-width:calc(100% - 252px);}
     canvas{width:100%;height:100%;display:block;touch-action:none;}
-    .panel{
-      width:252px;border-left:1px solid rgba(0,0,0,0.12);
-      padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;background:#fafafa;
-    }
+	    .panel{
+	      width:252px;border-left:1px solid rgba(0,0,0,0.12);
+	      padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;background:#fafafa;
+	      height:100%;
+	      overflow:auto;
+	      overscroll-behavior:contain;
+	    }
     .title{
       font-weight:800;font-size:14px;padding:10px 12px;border:1px solid rgba(0,0,0,0.12);
       border-radius:12px;background:#fff;
