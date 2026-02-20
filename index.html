@@ -158,10 +158,17 @@
   
     .hudBtn .sub{font-size:0.70em;font-weight:800;opacity:.9;}
     .statusTitle{font-weight:900;margin-bottom:8px;}
-    .matchGrid{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;row-gap:4px;font-size:12px;line-height:1.2;}
-    .matchItem{display:flex;justify-content:space-between;gap:10px;}
-    .matchItem .k{min-width:28px;font-weight:900;}
-    .matchItem .v{white-space:nowrap;}
+    .matchGrid{
+	display:grid;
+	grid-template-columns:1fr 1fr;
+	column-gap:14px;
+	row-gap:4px;
+	font-size:12px;
+	line-height:1.2;
+	}
+    .matchItem{display:flex;justify-content:flex-start;gap:8px;min-width:0;}
+    .matchItem .k{width:22px;font-weight:900;}
+    .matchItem .v{white-space:nowrap;min-width:0;}
 
 
     /* Controls overlay (top-left, transparent) */
@@ -282,8 +289,8 @@
       <div class="storage" id="solverBox">
         <b>최소 굴림수</b>
         <div class="row">
-          <button id="solveStageBtn" type="button">현재 스테이지 계산</button>
-          <button id="refineBtn" type="button" disabled style="margin-top:8px;">2단계 재탐색</button>
+          <button id="solveStageBtn" type="button">계산</button>
+          <button id="refineBtn" type="button" disabled>2단계탐색</button>
 </div>
         <div class="solverControls" style="margin-top:10px;">
           <div style="font-size:12px; color:#666; margin-bottom:6px;">튜닝 (근사치/완성 우선)</div>
