@@ -6,19 +6,19 @@
   <title>ChromaRoll</title>
   <style>
 	    /* Prevent the whole page from scrolling; the right panel scrolls internally. */
-	    html,body{margin:0;height:100%;overflow:hidden;background:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif;}
-    .app{height:100%;display:flex;background:#fff;}
+	    html,body{margin:0;height:100%;overflow:hidden;background:#000;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif;}
+    .app{height:100%;display:flex;background:#000;}
     .game{flex:1;min-width:0;position:relative;background:#fff;width:min(calc(100vh * 0.5625), calc(100% - 252px));max-width:calc(100% - 252px);}
     canvas{width:100%;height:100%;display:block;touch-action:none;}
 	    .panel{
 	      width:252px;border-left:1px solid rgba(0,0,0,0.12);
-	      padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;background:#fafafa;
+	      padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;background:#111;color:#000;
 	      height:100%;
 	      overflow:auto;
 	      overscroll-behavior:contain;
 	    }
     .title{
-      font-weight:800;font-size:14px;padding:10px 12px;border:1px solid rgba(0,0,0,0.12);
+      font-weight:800;font-size:14px;padding:10px 12px;border:1px solid #333;
       border-radius:12px;background:#fff;
     }
     .row{display:flex;gap:10px;}
@@ -50,9 +50,9 @@
     .hud{position:absolute;inset:0;pointer-events:none;}
     .hud-bottom{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:12px;pointer-events:auto;}
     .hudBtn{
-      height:88px;min-width:280px;padding:0 36px;border-radius:22px;border:1px solid rgba(0,0,0,.14);
+      height:88px;min-width:280px;padding:0 36px;border-radius:22px;border:1px solid rgba(59,130,246,.6);
       font-size:28px;
-      background:#111;color:#fff;font-weight:800;letter-spacing:.2px;cursor:pointer;
+      background:#2563eb;color:#fff;font-weight:800;letter-spacing:.2px;cursor:pointer;
       box-shadow:0 6px 18px rgba(0,0,0,.12);
       display:flex;flex-direction:column;align-items:center;justify-content:center;
       text-align:center;white-space:normal;line-height:1.05;
@@ -72,11 +72,18 @@
   
     .stageLabel{
       position:absolute;top:14px;left:50%;transform:translateX(-50%);
-      padding:8px 14px;border-radius:14px;
-      background:rgba(255,255,255,.82);border:1px solid rgba(0,0,0,.12);
-      font-weight:900;font-size:18px;letter-spacing:.5px;
-      pointer-events:none;user-select:none;
-      box-shadow:0 8px 24px rgba(0,0,0,.10);
+      padding:0;border:none;
+      background:none;
+      box-shadow:none;
+      border-radius:0;
+
+      font-weight:900;
+      font-size:18px;
+      letter-spacing:.5px;
+      color:#ffffff;   
+      pointer-events:none;
+      user-select:none;
+
     }
     .stageBox{
       padding:12px;border-radius:12px;border:1px solid rgba(0,0,0,0.12);background:#fff;
@@ -117,9 +124,8 @@
       position:absolute; top:14px; left:14px;
       pointer-events:auto;
       /* 30~50% smaller than previous (14px -> 10px) */
-      font-size:10px; line-height:1.45; color:#111;
+      font-size:10px; line-height:1.45; color:#ffffff;
       font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
-      text-shadow: 0 1px 0 rgba(255,255,255,0.65);
       user-select:none;
     }
     .controlsOverlay .toggle{
@@ -136,7 +142,6 @@
       width:92px;
       height:122px;
       pointer-events:none;
-      opacity:0.35;
       transform: translate(-50%, -100%);
       animation: tutBounce 1.05s ease-in-out infinite;
       filter: drop-shadow(0 4px 6px rgba(0,0,0,0.10));
@@ -145,7 +150,7 @@
       0%,100%{ transform: translate(-50%, -100%) translateY(10px); }
       50%     { transform: translate(-50%, -100%) translateY(-10px); }
     }
-    .tutorialArrow svg{ width:100%; height:100%; display:block; }
+    .tutorialArrow svg{ width:100%; height:100%; display:block;fill: rgba(59,130,246,0.6);}
 
     .tutorialText{
       position:absolute;
@@ -154,10 +159,9 @@
       transform: translateX(-50%);
       font-size:22px;
       font-weight:900;
-      color:#111;
+      color:#fff;
       pointer-events:none;
       user-select:none;
-      text-shadow: 0 2px 0 rgba(255,255,255,0.75);
       white-space:nowrap;
     }
 
@@ -191,10 +195,10 @@
           <div id="controlsContent" class="content">
             - 스타트 : 버튼 클릭 / 스페이스바<br>
             - 결정 : 버튼 클릭 / 스페이스바<br>
-            - → : → 슬라이드 / D / 숫자패드 6<br>
-            - ← : ← 슬라이드 / A / 숫자패드 4<br>
-            - ↑ : ↑ 슬라이드 / W / 숫자패드 8<br>
-            - ↓ : ↓ 슬라이드 / S / 숫자패드 5
+            - → : → 슬라이드 / D<br>
+            - ← : ← 슬라이드 / A<br>
+            - ↑ : ↑ 슬라이드 / W<br>
+            - ↓ : ↓ 슬라이드 / S
           </div>
         </div>
 
@@ -652,7 +656,7 @@ if ("outputColorSpace" in renderer) renderer.outputColorSpace = THREE.SRGBColorS
 if ("toneMapping" in renderer) renderer.toneMapping = THREE.NoToneMapping;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xffffff);
+scene.background = new THREE.Color(0x000000);
 
 // lights (안 보이는 문제 방지: 밝게)
 scene.add(new THREE.AmbientLight(0xffffff, 1.5));
@@ -927,7 +931,7 @@ const tutorialTextEl  = document.getElementById('tutorialText');
 if(tutorialArrowEl){
   tutorialArrowEl.innerHTML = `
     <svg viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path fill="rgba(0,0,0,0.35)" d="M50 0 L90 45 H66 V140 H34 V45 H10 Z"/>
+      <path fill="#2563EB" d="M50 0 L90 45 H66 V140 H34 V45 H10 Z"/>
     </svg>
   `;
 }
@@ -1008,12 +1012,12 @@ const tileGroup = new THREE.Group();
 boardRoot.add(tileGroup);
 
 const tilePlane = new THREE.PlaneGeometry(1,1);
-const matWhite = new THREE.MeshBasicMaterial({ color: HEX.W });
+const matWhite = new THREE.MeshBasicMaterial({ color: 0x000000 });
 const matBeige = new THREE.MeshBasicMaterial({ color: HEX.W });
 const matR = new THREE.MeshBasicMaterial({ color: HEX.R });
 const matY = new THREE.MeshBasicMaterial({ color: HEX.Y });
 const matB = new THREE.MeshBasicMaterial({ color: HEX.B });
-const matStart = new THREE.MeshBasicMaterial({ color: 0xffffff }); // start tiles (white)
+const matStart = new THREE.MeshBasicMaterial({ color: 0x000000 }); // start tiles (white)
 
 // 목표 타일은 50% 밝게(흰색과 50% 믹스)
 const matGoalR = new THREE.MeshBasicMaterial({ color: mixWithWhite(HEX.R, 0.5) });
